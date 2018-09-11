@@ -107,24 +107,20 @@ static const Pin spi_pins[] = {
 	PIN_SPI_NPCS3
 };
 
-struct _Mailbox { // from 301
-
-    /** Command send to the monitor to be executed. */
-    uint32_t command;
-    /** Returned status, updated at the end of the monitor execution.*/
-    uint32_t status;
+struct _SPI { // from 301
 
     /** Input Arguments*/ 
-    uint32_t cmd_addr;    // registers address or VC button ID
-    uint32_t cmd_value;
-    uint32_t spi_cs;
+         uint8_t rw;  
+         uint8_t addr;    
+         uint8_t data;
+
 };
 
 /** Global timestamps in milliseconds since start of application */
 volatile uint32_t dwTimeStamp = 0;
 
 /** SPI Clock setting (Hz) */
-static uint32_t spiClock = 500000;
+static uint32_t spiClock     = 1000000;
 static uint32_t dbg_baudrate = 115200;
 
 /** Global DMA driver for all transfer */
@@ -145,66 +141,19 @@ unsigned char item_status=0;
 
 
 /** SPI clock configuration */
-static const uint32_t clockConfigurations[3] = { 500000, 1000000, 5000000};
+static const uint32_t clockConfigurations[3] = { 600000, 2000000, 4000000};
 
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
-COMPILER_ALIGNED(32) uint8_t pTxBuffer[] = "This is SPI LoopBack Test Buffer";
-COMPILER_ALIGNED(32) uint8_t pRxBuffer[30];
+COMPILER_ALIGNED(32) uint8_t pTxBuffer[1] = "Z";
+COMPILER_ALIGNED(32) uint8_t pRxBuffer[1];
 
-static void Init_SPI(void) 
-{// from 301    
-    /* Enable the SPI clock*/
-    PMC_EnablePeripheral(ID_SPI0) ;
-
-    /* Configure SPI in Master Mode with CS selected !!! */
-    SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_PCS(1));
-
-    SPI_ConfigureNPCS(SPI0, 1, SPI_SCBR( 8000000, BOARD_MCK));
-    
-    /* Enable the SPI */
-    SPI_Enable(SPI0) ;    
-}
-
-static void SENSE_SPI_CS_SELECT(void) 
-{// from 301 
-	  REG_PIOA_CODR = mask_spics;
-}
-
-static void SENSE_SPI_CS_DESELECT(void) 
-{// from 301
-	  //PIN_SPI_NPCS3_PA22,PIN_SPI_NPCS2_PA30,PIN_SPI_NPCS1_PA31,PIN_SPI_NPCS0_PA11
-	  //(0x1<<22)|(0x1<<30)|(0x1<<31)|(0x1<<11)
-	  REG_PIOA_SODR = (0x1<<22)|(0x1<<30)|(0x1<<31)|(0x1<<11);
-}
-
-static void SENSE_SPI_READ(unsigned char addr,volatile unsigned char*pData,unsigned char size)
-{// from 301
-	  unsigned char i;
-	  
-	  SENSE_SPI_CS_SELECT();
-	  
-	  SPI_Write(SPI0, 1, (addr|0x80));
-	  for(i=0;i<size;i++){
-	      SPI_Write(SPI0, 1, 0xFF);
-	      pData[i]=SPI_Read(SPI0);
-	  }
-	      
-	  SENSE_SPI_CS_DESELECT(); 	
-}
-
-static void SENSE_SPI_WRITE(unsigned char addr,volatile unsigned char*pData,unsigned char size)
-{// from 301
-	  unsigned char i;
-	  
-	  SENSE_SPI_CS_SELECT();
-	  
-	  SPI_Write(SPI0, 1, (addr&0x7F));
-	  for(i=0;i<size;i++)
-	      SPI_Write(SPI0, 1, pData[i]);
-	      
-	  SENSE_SPI_CS_DESELECT();    
+static void SetClockConfiguration(uint8_t configuration)
+{
+	spiClock = clockConfigurations[configuration];
+	printf("Setting SPI master clock #%u ... \n\r",
+			(unsigned int)clockConfigurations[configuration]);
 }
 
 static void waitKey(void)
@@ -215,6 +164,61 @@ static void waitKey(void)
 			break;
 	}
 }
+
+
+
+static void Init_SPI(void) 
+{// from 301    
+     SetClockConfiguration(0);
+    /* Enable the SPI clock*/
+    PMC_EnablePeripheral(ID_SPI0) ;
+
+    /* Configure SPI in Master Mode with CS selected !!! */
+    SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_PCS(SPI0_CS3));
+
+    SPI_ConfigureNPCS(SPI0, SPI0_CS3, SPI_SCBR( spiClock, BOARD_MCK));
+    printf("spi clock ratio: %x \n\r", BOARD_MCK/spiClock);
+    /* Enable the SPI */
+    SPI_Enable(SPI0) ;    
+}
+
+
+
+static uint8_t SENSE_READ(Spi *spi, uint8_t dwNpcs, uint8_t addr)
+{// jjk
+        uint8_t data;
+        bool  wait=true;
+
+  	while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
+        spi->SPI_TDR = (addr|0x80) | SPI_PCS(dwNpcs);
+    
+        while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
+        spi->SPI_TDR = (0xff) | SPI_PCS(dwNpcs);
+          
+         while (wait){
+         if ((spi->SPI_SR & SPI_SR_RDRF) == 0) wait=true; else wait=false;
+         printf("while wait = %d\n\r", wait);
+         };
+
+         data = spi->SPI_RDR;
+         
+        TRACE_INFO("READ COMMAND REG[0x%x]=0x%x\n\r", addr, data);	  
+        return data;  
+}
+
+
+
+static void SENSE_WRITE(Spi *spi, uint8_t dwNpcs, uint8_t addr, volatile  uint8_t pData)
+{// jjk
+  	while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
+        spi->SPI_TDR = (addr&0x7F) | SPI_PCS(dwNpcs);
+        while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
+        spi->SPI_TDR = (pData) | SPI_PCS(dwNpcs);
+          
+        TRACE_INFO("WRITE COMMAND REG[0x%x]=0x%x\n\r", addr, pData);	      
+}
+
+
 
 
 /**
@@ -241,12 +245,7 @@ void XDMAC_Handler(void)
  * \brief Sets the specified SPI clock configuration.
  * \param configuration  Index of the configuration to set.
  */
-static void SetClockConfiguration(uint8_t configuration)
-{
-	spiClock = clockConfigurations[configuration];
-	printf("Setting SPI master clock #%u ... \n\r",
-			(unsigned int)clockConfigurations[configuration]);
-}
+
 
 /**
  * \brief Perform SPI transfer with interrupt in SPI loop back mode.
@@ -337,12 +336,13 @@ static void DisplayMenu( void )
  *
  *  \return Unused (ANSI-C compatibility).
  */
-extern int main (int argc, char **argv) // from 301  
+extern int main (void)  
 {
 	uint8_t ucKey;
         
-        struct _Mailbox *pMailbox = (struct _Mailbox *) argv; // from 301  
-        unsigned char tmp; // from 301 
+        struct _SPI spibox; // from 301  
+        uint8_t tmp;        // from 301 
+        uint8_t secu = 0xA0|0x01;
        
 	/* Enable I and D cache */
 	SCB_EnableICache();
@@ -360,27 +360,64 @@ extern int main (int argc, char **argv) // from 301
 	printf("--- %s\n\r", BOARD_NAME);
 	printf("--- Compiled: %s %s With %s--\n\r", __DATE__, __TIME__, COMPILER_NAME);
         
-        Clock_Config();
-
-        /* access to the sense registers */  // from 301  
-       //  pMailbox->cmd_addr = VC_ITEM_CHIP_ID;
-       // Init_SPI();
-       // SENSE_SPI_READ(pMailbox->cmd_addr,&tmp,1);       
-       // pMailbox->cmd_value=tmp;
-       // pMailbox->status = APPLET_SUCCESS;   
-        
-        TRACE_INFO("COMMAND READ REG[0x%x]=0x%x\n\r",
-              (unsigned int)pMailbox->cmd_addr,
-              (unsigned int)pMailbox->cmd_value);
-           
+        Clock_Config();        
      
         /* Display menu */
-	DisplayMenu();
+	//DisplayMenu();
+        
+ //from301
+        
+        Init_SPI(); 
+  
+        waitKey();
+        spibox.addr  = REG_SOFT_NRESET;
+        spibox.data = 0x0f;
 
+        SENSE_WRITE(SPI0, SPI0_CS3, spibox.addr, spibox.data);
+        
+        spibox.addr  = 0x3e;
+        spibox.data  = secu;
+
+        SENSE_WRITE(SPI0, SPI0_CS3, spibox.addr, spibox.data);        
+        
+        Wait(500);
+        
+        waitKey();
+        spibox.addr = 0x30;
+        spibox.data = 0xff;
+        
+        SENSE_WRITE(SPI0, SPI0_CS3, spibox.addr, spibox.data); 
+        
+    /*
+        spibox.addr = REG_ATCFG;
+        spibox.addr = REG_ADCV1_TAG;
+        spibox.addr = REG_ITOUTCR;
+        spibox.addr = VC_ITEM_CHIP_ID;
+        spibox.addr = REG_SDI0;
+ */
+        
+       
+        
+        
+        
+        
+        while (1) {
+        waitKey();
+          
+        /* access to the sense registers */  // from 301  
+        spibox.addr = REG_ADCV3_TAG;
+        spibox.data = SENSE_READ(SPI0, SPI0_CS3, spibox.addr);  
+        spibox.addr = REG_ADCV2_TAG;
+        spibox.data = SENSE_READ(SPI0, SPI0_CS3, spibox.addr);          
+          
+        }
+        
+        
+        
 	while (1) {
           
 		ucKey = DBG_GetChar();
-                SpiLoopBack();
+                
                 
 		switch (ucKey) {
 		case 'h':

@@ -31,7 +31,9 @@ void Clock_Config(void)
 	/* Configure PCK0 as peripheral */
         //waitKey();
         CalcPmcParam();
-	Configure_Pck0(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));
+	//Configure_Pck0(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));
+        Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75));
+        
 	printf("\n\r --- Current PMC clock from start-up configuration --- \n\r");
 	DumpPmcConfiguration();
 }
