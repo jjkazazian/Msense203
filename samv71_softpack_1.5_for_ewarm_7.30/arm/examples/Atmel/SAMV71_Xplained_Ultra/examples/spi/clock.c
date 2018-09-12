@@ -131,7 +131,7 @@ void CalcPmcParam(void)
 	} else {
 		onChipRC = (PMC->CKGR_MOR & CKGR_MOR_MOSCRCF_Msk);
 		masterClk = ((onChipRC == CKGR_MOR_MOSCRCF_12_MHz)? 12 :
-				((onChipRC == CKGR_MOR_MOSCRCF_8_MHz) ? 8 : 4)) * 1000000;
+		((onChipRC == CKGR_MOR_MOSCRCF_8_MHz) ? 8 : 4)) * 1000000;
 	}
 }
 

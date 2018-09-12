@@ -1,88 +1,4 @@
-/* ---------------------------------------------------------------------------- */
-/*                  Microchip Microcontroller Software Support                  */
-/*                       SAM Software Package License                           */
-/* ---------------------------------------------------------------------------- */
-/* Copyright (c) 2015, Atmel Corporation                                        */
-/*                                                                              */
-/* All rights reserved.                                                         */
-/*                                                                              */
-/* Redistribution and use in source and binary forms, with or without           */
-/* modification, are permitted provided that the following condition is met:    */
-/*                                                                              */
-/* - Redistributions of source code must retain the above copyright notice,     */
-/* this list of conditions and the disclaimer below.                            */
-/*                                                                              */
-/* Atmel's name may not be used to endorse or promote products derived from     */
-/* this software without specific prior written permission.                     */
-/*                                                                              */
-/* DISCLAIMER:  THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR   */
-/* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF */
-/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE   */
-/* DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR ANY DIRECT, INDIRECT,      */
-/* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT */
-/* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,  */
-/* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF    */
-/* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING         */
-/* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, */
-/* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           */
-/* ---------------------------------------------------------------------------- */
-
-/**
- *  \page spi SPI example
- *
- *  \section Purpose
- *
- * This example shows control of the SPI in loop back mode.
- *
- *  \section Requirements
- *
- *  This package can be used with SAMV71 Xplained Ultra board or SAME70 Xplained board.
- *
- *  \section Description
- *
- *  \section Usage
- *
- *  -# Build the program and download it inside the board.
- *     Please refer to the Getting Started with SAM V71/E70 Microcontrollers.pdf
- *  -# On the computer, open and configure a terminal application
- *     (e.g. HyperTerminal on Microsoft Windows) with these settings:
- *    - 115200 baud rate
- *    - 8 bits of data
- *    - No parity
- *    - 1 stop bit
- *    - No flow control
- *  -# Start the application.
- *  -# In the terminal window, the following text should appear (values depend
- *  on the board and chip used):
- *     \code
- *      -- SPI Example xxx --
- *      -- xxxxxx-xx
- *      -- Compiled: xxx xx xxxx xx:xx:xx --
- *     Menu :
- *      ------
- *      0: Set SPCK =  500000 Hz
- *      1: Set SPCK = 1000000 Hz
- *      2: Set SPCK = 5000000 Hz
- *      s: Perform SPI transfer start
- *      d: Perform SPI Dma Transfer
- *      h: Display menu
- *     \endcode
- *
- * The user can then choose any of the available options to perform
- * the described action.
- *
- *  \section References
- *  - spi/main.c
- *  - pio.h
- *  - pio_it.h
- *  - board.h
- */
-
-/** \file
- *
- *  This file contains all the specific code for the SPI example.
- *
- */
+//jj kazazian 2018//
 
 /*----------------------------------------------------------------------------
  *        Headers
@@ -113,31 +29,18 @@ struct _SPI { // from 301
          uint8_t rw;  
          uint8_t addr;    
          uint8_t data;
-
 };
 
-/** Global timestamps in milliseconds since start of application */
-volatile uint32_t dwTimeStamp = 0;
 
 /** SPI Clock setting (Hz) */
-static uint32_t spiClock     = 1000000;
+static uint32_t spiClock     = 600000;
 static uint32_t dbg_baudrate = 115200;
 
-/** Global DMA driver for all transfer */
-static Spid    SpiDma;
-static SpidCmd SpiCommand;
-static sXdmad  Dma;
 
 #define SPI0_CS0  0
 #define SPI0_CS1  1
 #define SPI0_CS2  2
 #define SPI0_CS3  3
-
-
-// from 301
-unsigned int  mask_spics;
-unsigned char reg_value;
-unsigned char item_status=0;
 
 
 /** SPI clock configuration */
@@ -146,13 +49,11 @@ static const uint32_t clockConfigurations[3] = { 600000, 2000000, 4000000};
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
-COMPILER_ALIGNED(32) uint8_t pTxBuffer[1] = "Z";
-COMPILER_ALIGNED(32) uint8_t pRxBuffer[1];
 
 static void SetClockConfiguration(uint8_t configuration)
 {
 	spiClock = clockConfigurations[configuration];
-	printf("Setting SPI master clock #%u ... \n\r",
+	printf("-I- Setting SPI master clock #%u ... \n\r",
 			(unsigned int)clockConfigurations[configuration]);
 }
 
@@ -167,146 +68,85 @@ static void waitKey(void)
 
 
 
-static void Init_SPI(void) 
+static void Init_SPI(Spi *spi, uint8_t dwNpcs) 
 {// from 301    
-     SetClockConfiguration(0);
+    /* Disable write protection*/
     /* Enable the SPI clock*/
     PMC_EnablePeripheral(ID_SPI0) ;
 
     /* Configure SPI in Master Mode with CS selected !!! */
-    SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_PCS(SPI0_CS3));
-
-    SPI_ConfigureNPCS(SPI0, SPI0_CS3, SPI_SCBR( spiClock, BOARD_MCK));
-    printf("spi clock ratio: %x \n\r", BOARD_MCK/spiClock);
+    SPI_Configure(SPI0, ID_SPI0, SPI_MR_MSTR | SPI_MR_MODFDIS | SPI_PCS(dwNpcs));
+    SetClockConfiguration(0);
+    SPI_ConfigureNPCS(spi, dwNpcs, SPI_SCBR( spiClock, BOARD_MCK));
+    //printf("-I- spi clock ratio: %x \n\r", BOARD_MCK/spiClock);
+    /* 16 bits mode transfer*/
+    spi->SPI_CSR[dwNpcs] |=  SPI_CSR_BITS_16_BIT; 
+    
+    spi->SPI_CSR[dwNpcs] |= SPI_CSR_DLYBS(1);
+    spi->SPI_CSR[dwNpcs] |= SPI_CSR_DLYBCT(64);
+    spi->SPI_CSR[dwNpcs] |= SPI_CSR_NCPHA;
+    spi->SPI_CSR[dwNpcs] |= SPI_CSR_CPOL;
+    
     /* Enable the SPI */
-    SPI_Enable(SPI0) ;    
+    SPI_Enable(spi) ; 
+   
 }
 
-
-
-static uint8_t SENSE_READ(Spi *spi, uint8_t dwNpcs, uint8_t addr)
-{// jjk
-        uint8_t data;
-        bool  wait=true;
-
-  	while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
-        spi->SPI_TDR = (addr|0x80) | SPI_PCS(dwNpcs);
-    
-        while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
-        spi->SPI_TDR = (0xff) | SPI_PCS(dwNpcs);
-          
-         while (wait){
-         if ((spi->SPI_SR & SPI_SR_RDRF) == 0) wait=true; else wait=false;
-         printf("while wait = %d\n\r", wait);
+static bool check_RDRF(Spi *spi) {
+        bool     wait=true;
+        bool     status=false;
+        uint8_t  rdrf;
+        uint32_t n=0;
+        
+while (wait){
+                   //Wait(1);  
+                   n++;
+                   rdrf = spi->SPI_SR & SPI_SR_RDRF;
+                   printf("-I- RDRF: %x \n\r", rdrf);
+                   if (n>1) {if (rdrf == 0) wait=true; else wait=false;}
+                   if (n>15) {wait=false;} // timeout
          };
+ if  (rdrf == 0) status=false; else status=true;      
+        
+return status;
+} 
 
-         data = spi->SPI_RDR;
+static uint8_t SENSE_READ_16(Spi *spi, uint8_t dwNpcs, uint8_t addr)
+{// jjk
+        uint16_t data;
+        uint16_t wdata;
+        bool  wait=true;
+        bool  status;
+        uint32_t n=0;
+        data = spi->SPI_RDR;  // clear rdrf;
+        wdata = (addr|0x80)<< 8 | (0xff); // 1+addr+data
+
+  	while ((spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	
+        spi->SPI_TDR = wdata | SPI_PCS(dwNpcs); // write address
+        while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
          
-        TRACE_INFO("READ COMMAND REG[0x%x]=0x%x\n\r", addr, data);	  
+        if (check_RDRF(spi)) data = spi->SPI_RDR; // read data
+         
+        TRACE_INFO("READ COMMAND REG[0x%x]=0x%04x\n\r", addr, data);	  
         return data;  
 }
 
 
 
-static void SENSE_WRITE(Spi *spi, uint8_t dwNpcs, uint8_t addr, volatile  uint8_t pData)
+static void SENSE_WRITE_16(Spi *spi, uint8_t dwNpcs, uint8_t addr, volatile  uint8_t Data)
 {// jjk
-  	while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
-        spi->SPI_TDR = (addr&0x7F) | SPI_PCS(dwNpcs);
+  uint16_t data = 0;
+  uint16_t rdata;
+  data = (addr&0x7F)<< 8 | Data;
+ 
+        while ((spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	
+        spi->SPI_TDR = data | SPI_PCS(dwNpcs);   // Write address+data
         while ((spi->SPI_SR & SPI_SR_TDRE) == 0);
-        spi->SPI_TDR = (pData) | SPI_PCS(dwNpcs);
-          
-        TRACE_INFO("WRITE COMMAND REG[0x%x]=0x%x\n\r", addr, pData);	      
+        
+        rdata = spi->SPI_RDR;  //dummy read data
+        TRACE_INFO("WRITE COMMAND REG[addr/data]=0x%02x\n\r",  data);	      
 }
 
-
-
-
-/**
- *  \brief Handler for SPI0.
- *
- *  Process SPI interrupts
- */
-void SPI0_Handler(void)
-{
-	printf("%c", (char) SPI_Read(SPI0));
-}
-
-/**
- *  \brief Handler for XDMAC.
- *
- *  Process XDAMC interrupts
- */
-void XDMAC_Handler(void)
-{
-	XDMAD_Handler(&Dma);
-}
-
-/**
- * \brief Sets the specified SPI clock configuration.
- * \param configuration  Index of the configuration to set.
- */
-
-
-/**
- * \brief Perform SPI transfer with interrupt in SPI loop back mode.
- */
-static void SpiLoopBack(void)
-{
-	uint8_t i;
-
-	printf( "\n\r-I- Configure SPI master\n\r" );
-	SPI_Configure(SPI0, ID_SPI0, (SPI_MR_MSTR | SPI_MR_MODFDIS
-					| SPI_MR_LLB | SPI_PCS( SPI0_CS3 )));
-	SPI_ConfigureNPCS( SPI0,
-			SPI0_CS3,
-			SPI_DLYBCT( 1000, BOARD_MCK ) |
-			SPI_DLYBS(1000, BOARD_MCK) |
-			SPI_SCBR( spiClock, BOARD_MCK) );
-
-	/* Configure and enable interrupt on RC compare */
-	NVIC_ClearPendingIRQ(SPI0_IRQn);
-	NVIC_SetPriority(SPI0_IRQn ,1);
-	NVIC_EnableIRQ(SPI0_IRQn);
-
-	SPI_EnableIt(SPI0, SPI_IER_RDRF);
-	SPI_Enable(SPI0);
-
-	for (i = 0; ;i++) {
-		SPI_Write(SPI0, SPI0_CS3 , (uint16_t)pTxBuffer[i]);
-		if (pTxBuffer[i] =='\0')
-			break;
-	}
-	if (SPI_IsFinished(SPI0)) {
-		SPI_Disable(SPI0);
-	}
-}
-
-/**
- * \brief Perform SPI transfer with DMA in SPI loop back mode.
- */
-static void SpiLoopBackDma(void)
-{
-	printf( "\n\r-I- Configure SPI master\n\r" );
-	Dma.pXdmacs = XDMAC;
-
-	SpiCommand.TxSize = 30;
-	SpiCommand.pTxBuff = (uint8_t *)pTxBuffer;
-	SpiCommand.RxSize= 30;
-	SpiCommand.pRxBuff = (uint8_t *)pRxBuffer;
-	SpiCommand.spiCs = SPI0_CS3;
-
-
-	SPID_Configure(&SpiDma, SPI0, ID_SPI0, (SPI_MR_MSTR | SPI_MR_MODFDIS
-					| SPI_MR_LLB | SPI_PCS( SPI0_CS3 )), &Dma);
-	SPI_ConfigureNPCS(SPI0,
-					SPI0_CS3,
-					SPI_DLYBCT( 1000, BOARD_MCK ) |
-					SPI_DLYBS(1000, BOARD_MCK) |
-					SPI_SCBR( spiClock, BOARD_MCK));
-
-	SPI_Enable(SPI0);
-	SPID_SendCommand(&SpiDma, &SpiCommand);
-}
 
 
 /**
@@ -367,26 +207,23 @@ extern int main (void)
         
  //from301
         
-        Init_SPI(); 
+        Init_SPI(SPI0, SPI0_CS3); 
   
         waitKey();
         spibox.addr  = REG_SOFT_NRESET;
         spibox.data = 0x0f;
-
-        SENSE_WRITE(SPI0, SPI0_CS3, spibox.addr, spibox.data);
         
+        SENSE_WRITE_16(SPI0, SPI0_CS3, spibox.addr, spibox.data);
+       
         spibox.addr  = 0x3e;
         spibox.data  = secu;
 
-        SENSE_WRITE(SPI0, SPI0_CS3, spibox.addr, spibox.data);        
+        SENSE_WRITE_16(SPI0, SPI0_CS3, spibox.addr, spibox.data);        
         
-        Wait(500);
-        
-        waitKey();
         spibox.addr = 0x30;
         spibox.data = 0xff;
         
-        SENSE_WRITE(SPI0, SPI0_CS3, spibox.addr, spibox.data); 
+        SENSE_WRITE_16(SPI0, SPI0_CS3, spibox.addr, spibox.data); 
         
     /*
         spibox.addr = REG_ATCFG;
@@ -396,39 +233,30 @@ extern int main (void)
         spibox.addr = REG_SDI0;
  */
         
-       
-        
-        
-        
-        
-        while (1) {
-        waitKey();
-          
-        /* access to the sense registers */  // from 301  
-        spibox.addr = REG_ADCV3_TAG;
-        spibox.data = SENSE_READ(SPI0, SPI0_CS3, spibox.addr);  
-        spibox.addr = REG_ADCV2_TAG;
-        spibox.data = SENSE_READ(SPI0, SPI0_CS3, spibox.addr);          
-          
-        }
-        
-        
+      
         
 	while (1) {
           
-		ucKey = DBG_GetChar();
-                
-                
+		//ucKey = DBG_GetChar();
+                waitKey();
+          
+        /* access to the sense registers */  // from 301  
+        spibox.addr = REG_ADCV3_TAG;
+        spibox.data = SENSE_READ_16(SPI0, SPI0_CS3, spibox.addr);  
+        spibox.addr = REG_ADCV2_TAG;
+        spibox.data = SENSE_READ_16(SPI0, SPI0_CS3, spibox.addr);      
+        spibox.addr = REG_ADCV1_TAG;
+        spibox.data = SENSE_READ_16(SPI0, SPI0_CS3, spibox.addr);                 
 		switch (ucKey) {
 		case 'h':
-			DisplayMenu();
+		        DisplayMenu();
 			break;
 		case 's':
-			SpiLoopBack();
+			
 			break;
 
 		case 'd':
-			SpiLoopBackDma();
+			
 		default:
 			/* Set SPI clock configuration #n */
 			if ((ucKey >= '0') && (ucKey <= ('0' + 2))) {
@@ -439,3 +267,32 @@ extern int main (void)
 	}
 }
 /** \endcond */
+/* ---------------------------------------------------------------------------- */
+/*                  Microchip Microcontroller Software Support                  */
+/*                       SAM Software Package License                           */
+/* ---------------------------------------------------------------------------- */
+/* Copyright (c) 2015, Microchip Corporation                                    */
+/*                                                                              */
+/* All rights reserved.                                                         */
+/*                                                                              */
+/* Redistribution and use in source and binary forms, with or without           */
+/* modification, are permitted provided that the following condition is met:    */
+/*                                                                              */
+/* - Redistributions of source code must retain the above copyright notice,     */
+/* this list of conditions and the disclaimer below.                            */
+/*                                                                              */
+/* Atmel's name may not be used to endorse or promote products derived from     */
+/* this software without specific prior written permission.                     */
+/*                                                                              */
+/* DISCLAIMER:  THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR   */
+/* IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE   */
+/* DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR ANY DIRECT, INDIRECT,      */
+/* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT */
+/* LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,  */
+/* OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF    */
+/* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING         */
+/* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, */
+/* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           */
+/* ---------------------------------------------------------------------------- */
+
