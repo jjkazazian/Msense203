@@ -29,9 +29,7 @@ void Clock_Config(void)
 	TimeTick_Configure();
 
 	/* Configure PCK0 as peripheral */
-        //waitKey();
         CalcPmcParam();
-	//Configure_Pck0(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));
         Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75));
         
 	printf("\n\r --- Current PMC clock from start-up configuration --- \n\r");
@@ -99,7 +97,7 @@ void Configure_Pck0(uint32_t css, uint32_t pres)
 	REG_PMC_SCER = PMC_SCER_PCK0;
 	/* Wait for the PCKRDY1 bit to be set in the PMC_SR register*/
 	while ((REG_PMC_SR & PMC_SR_PCKRDY0) == 0 );
-	Wait(50);
+	
 }
 
 
@@ -139,7 +137,7 @@ void CalcPmcParam(void)
 /* ----------------------------------------------------------------------------
  *         SAM Software Package License
  * ----------------------------------------------------------------------------
- * Copyright (c) 2016, Microchip Corporation
+ * Copyright (c) 2018, Microchip Corporation
  *
  * All rights reserved.
  *

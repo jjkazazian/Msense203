@@ -1,62 +1,57 @@
-//jj kazazian 2018//
-
+/* jj kazazaian 2018*/
 /*----------------------------------------------------------------------------
  *        Headers
  *----------------------------------------------------------------------------*/
 #include "include.h"
 #include "main_config.h"
-/*----------------------------------------------------------------------------
- *        modules Headers (clock,...)
- *----------------------------------------------------------------------------*/
-#include "clock.h"
-#include "spi_sense.h"
+
 /*----------------------------------------------------------------------------
  *        Local definitions
  *----------------------------------------------------------------------------*/
+static uint32_t dbg_baudrate = 115200;
 
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
-
- 
-static void DisplayMenu( void )
-{ // brief Displays the user menu on the DBGU.
-	uint32_t i;
-
-	printf("\n\rMenu :\n\r");
-	printf("------\n\r");
-
-	for (i = 0; i < 3; i++) {
-	//	printf("  %u: Set SPCK = %7u Hz\n\r",
-         //     (unsigned int)i, (unsigned int)clockConfigurations[i]);
+void waitKey(void)
+{
+	//printf("-I- Press any key to Continue...\n\r");
+	while (1) {
+		if (DBG_GetChar()!= 0)
+			break;
 	}
-	printf("  s: Perform SPI transfer start\n\r");
-	printf("  d: Perform SPI DMA Transfer (first 30 bytes of Tx buffer)\n\r");
-	printf("  h: Display menu \n\r\n\r");
+}
+static unsigned int_to_int(unsigned k) {
+    if (k == 0) return 0;
+    if (k == 1) return 1;                       /* optional */
+    return (k % 2) + 10 * int_to_int(k / 2);
 }
 
-/*----------------------------------------------------------------------------
- *        Exported functions
- *----------------------------------------------------------------------------*/
+void Print_int_to_bin(uint8_t k)
+{ 
+  printf(" Data binary code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
+}
 
-extern int main (void)  
+
+void Main_Config(void)
 {
-	uint8_t ucKey;
 
-        Main_Config();
-        Clock_Config();        
-        Sense_Config();
-     
-        waitKey();
-        Sense_Dump_param();  
+       /* Enable I and D cache */
+	SCB_EnableICache();
+	SCB_EnableDCache();
         
+	/* Disable watchdog */
+	WDT_Disable(WDT);
         
-	//DisplayMenu();
+        /* DBG UART */
+        DBG_Configure(dbg_baudrate, BOARD_MCK);
+         
+	/* Output example information */
+	printf("\n\r--- SPI Example %s --\n\r", SOFTPACK_VERSION);
+	printf("--- %s\n\r", BOARD_NAME);
+	printf("--- Compiled: %s %s With %s--\n\r", __DATE__, __TIME__, COMPILER_NAME);
         
-	while (1) {
-          
- 
-	}
+
 }
 /** \endcond */
 /* ---------------------------------------------------------------------------- */
@@ -87,4 +82,3 @@ extern int main (void)
 /* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, */
 /* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           */
 /* ---------------------------------------------------------------------------- */
-
