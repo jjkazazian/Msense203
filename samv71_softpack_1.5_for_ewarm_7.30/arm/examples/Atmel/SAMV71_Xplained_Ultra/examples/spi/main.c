@@ -18,22 +18,6 @@
  *        Local functions
  *----------------------------------------------------------------------------*/
 
- 
-static void DisplayMenu( void )
-{ // brief Displays the user menu on the DBGU.
-	uint32_t i;
-
-	printf("\n\rMenu :\n\r");
-	printf("------\n\r");
-
-	for (i = 0; i < 3; i++) {
-	//	printf("  %u: Set SPCK = %7u Hz\n\r",
-         //     (unsigned int)i, (unsigned int)clockConfigurations[i]);
-	}
-	printf("  s: Perform SPI transfer start\n\r");
-	printf("  d: Perform SPI DMA Transfer (first 30 bytes of Tx buffer)\n\r");
-	printf("  h: Display menu \n\r\n\r");
-}
 
 /*----------------------------------------------------------------------------
  *        Exported functions
@@ -41,8 +25,6 @@ static void DisplayMenu( void )
 
 extern int main (void)  
 {
-	uint8_t ucKey;
-
         Main_Config();
         Clock_Config();        
         Sense_Config();
@@ -51,12 +33,7 @@ extern int main (void)
         Sense_Dump_param();  
         
         
-	//DisplayMenu();
-        
-	while (1) {
-          
- 
-	}
+	while (1) {}
 }
 /** \endcond */
 /* ---------------------------------------------------------------------------- */

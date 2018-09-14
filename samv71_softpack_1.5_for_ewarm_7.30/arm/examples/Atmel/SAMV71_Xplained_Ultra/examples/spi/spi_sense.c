@@ -100,7 +100,7 @@ static void Print_Registers(uint8_t n) {
   uint32_t i;
   for (i = 0; i < n; i++) {
               printf("   Registers [0x%x] = \t0x%04x ", i, registers [(uint8_t)i]);  
-              Print_int_to_bin((uint8_t)registers [(uint8_t)i]);
+              Print_int8_to_bin((uint8_t)registers [(uint8_t)i]);
               printf("\n\r");
   }
 }
@@ -171,8 +171,14 @@ static void Analog_Config(void)
         Wait(1);
         Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONBIAS);
         Wait(1); 
+}
+
+static void Set_Channel(TEMP)
+{
+        Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
   
 }
+
 
 
 void  Sense_Config(void) {
@@ -196,7 +202,7 @@ void  Sense_Dump_param(void){
         Sense_Read(addr(ADCV3_TAG));          
         Sense_Read(addr(ANA_CTRL)); 
               
-   Print_Registers(48);     
+   Print_Registers(45);     
      
 }  
         

@@ -27,8 +27,8 @@ static unsigned int_to_int(unsigned k) {
     return (k % 2) + 10 * int_to_int(k / 2);
 }
 
-void Print_int_to_bin(uint8_t k)
-{ 
+void Print_int8_to_bin(uint8_t k)
+{ // 8 bits only
   printf(" Data binary code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
 }
 
