@@ -2,15 +2,8 @@
 /*
 The SPI Controller is an interface between an SPI port and a register bank of up to 128
 read/write 8 bits registers.
-28 registers are read-only and dedicated to ADC conversions (which is equivalent to seven 32
-bits registers).
-The SPI protocol is made of one bit of direction (read or write), 7 bits of address and 8 bits of
-data.
-A burst mode allows a read/write access of several registers at once.
-It also contains an interrupt line and two prescalers that can be used to generate the clock for
-analog and DSP part.
-*/
-/*
+
+
 A transfer occurs when SCSB signal is low. The incoming stream on MOSI is decoded on sclk
 negedge.
 The first received bit indicates the operation direction (0 for a write and 1 for a read).
@@ -63,7 +56,7 @@ static void Init_SPI(void)
     static uint32_t spiClock;
 
     /** SPI clock configuration */
-    static const uint32_t clockConfigurations[3] = { 600000, 2000000, 4000000};
+    static const uint32_t clockConfigurations[3] = { 8000000, 2000000, 4000000};
 
         /** Pins to configure for the application. */
         static const Pin spi_pins[] = {
@@ -135,9 +128,10 @@ static uint8_t Sense_Read(uint8_t addr)
         wdata = (addr|0x80)<< 8 | (0xff); // 1+addr+data
 
   	while ((spibox.spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	
+        data = spibox.spi->SPI_RDR;   // to clear the RDRF bit
         spibox.spi->SPI_TDR = wdata | SPI_PCS(spibox.cs); // write address
         while ((spibox.spi->SPI_SR & SPI_SR_TDRE) == 0);   
-        while ((spibox.spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	 
+       // while ((spibox.spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	 
         
         if (check_RDRF(spibox.spi)) data = spibox.spi->SPI_RDR; // read data
         registers[addr] = 0x0000;      // reset register
@@ -151,20 +145,23 @@ static uint8_t Sense_Read(uint8_t addr)
 static void Sense_Write( uint8_t addr, volatile  uint8_t Data)
 {// jjk
   uint16_t data = 0;
-  uint16_t rdata;
+
   data = (addr&0x7F)<< 8 | Data;
  
         while ((spibox.spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	
         spibox.spi->SPI_TDR = data | SPI_PCS(spibox.cs);   // Write address+data
         while ((spibox.spi->SPI_SR & SPI_SR_TDRE) == 0);
         
-        rdata = spibox.spi->SPI_RDR;  //dummy read data
+  
         TRACE_INFO("WRITE sense register [ addr/data ]=0x%02x\n\r",  data);	
         
 }
 
 static void Analog_Config(void)
 {
+         // clear register
+        Sense_Write(addr(ANA_CTRL), 0x0);
+         // write new config
         Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
         Wait(1);
         Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONREF);

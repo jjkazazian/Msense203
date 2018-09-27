@@ -4,11 +4,13 @@
  *----------------------------------------------------------------------------*/
 #include "include.h"
 #include "main_config.h"
-
+#include "dsp_sense.h"
+#include "mux.h"
 /*----------------------------------------------------------------------------
  *        Local definitions
  *----------------------------------------------------------------------------*/
 static uint32_t dbg_baudrate = 115200;
+extern struct _MAILBOX mb;   
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -32,6 +34,81 @@ void Print_int8_to_bin(uint8_t k)
   printf(" Data binary code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
 }
 
+
+void Init_state(void) {
+mb.dsp_compute    = false;
+mb.buffer_print   = false;
+mb.buffer_full    = false;
+}
+
+uint32_t Truth_table(void) {
+  int i; 
+  uint8_t val[8] = {0,1,2,3,4,5,0,0}; 
+  i  =  (int)mb.dsp_compute *4+
+        (int)mb.buffer_print*2+
+        (int)mb.buffer_full *1;
+ mb.next_state = val[i];
+ return i;
+ /*
+dsp_compute	
+        buffer_print	
+                buffer_full	
+                        State/next value
+0	0	0	0 // init state, will activate the dsp
+0	0	1	1 // DSP stoped after buffer is full
+0	1	0	2 // buffer transmitted
+0	1	1	3 // print bs to uart, end of uart, go to zero state
+1	0	0	4 // dsp next step computation
+1	0	1	5 // dsp computation done, bs buffer is full, will stop the dsp
+1	1	0	6
+1	1	1	7
+*/
+}
+void Next_state(void) {
+  uint32_t state;
+  uint32_t i;
+  
+  state = Truth_table(); 
+
+  //printf("  %d %d %d  state: %d next: %d  \r\n", mb.dsp_compute, mb.buffer_print, mb.buffer_full, state, mb.next_state);
+  
+  switch (mb.next_state) {
+		case 0: //  reset all bool to init value
+                       mb.dsp_compute = true;
+		break;               
+		case 1:  // do nothing
+                        Init_state();
+                break;        
+		case 2: // print bs buffer
+                       //for (i = 0; i < BSIZE; i++) printf ("  %d \r\n", mb.BS1[i]);
+                       Print_bs_2_bin();
+                       mb.buffer_print = false;
+		break;            
+                case 3: // do nothing      
+                       Init_state();
+		break;   
+                case 4: // dsp next step computation
+                       DSP();
+                       mb.count++;
+                break;
+                case 5: // stop dsp
+                       mb.dsp_compute = false;
+                       mb.buffer_print = true;
+                       mb.buffer_full  = false;
+                break;
+                case 6: // do nothing
+                       Init_state(); 
+                break;
+                case 7: // do nothing
+                       Init_state(); 
+                break;        
+                  
+		default: // do nothing
+                        Init_state();
+		break;
+		} 
+}
+ 
 
 void Main_Config(void)
 {

@@ -1,48 +1,86 @@
-//jj kazazian 2018//
-
+/* jj kazazaian 2018*/
 /*----------------------------------------------------------------------------
  *        Headers
  *----------------------------------------------------------------------------*/
 #include "include.h"
 #include "main_config.h"
-/*----------------------------------------------------------------------------
- *        modules Headers (clock,...)
- *----------------------------------------------------------------------------*/
-#include "clock.h"
-#include "spi_sense.h"
-#include "dsp_sense.h"
-/*----------------------------------------------------------------------------
- *        Local definitions
- *----------------------------------------------------------------------------*/
-  struct _MAILBOX mb;
-/*----------------------------------------------------------------------------
- *        Local functions
- *----------------------------------------------------------------------------*/
-
+#include "mux.h"
 
 /*----------------------------------------------------------------------------
- *        Exported functions
+ *        Local variables
+ *----------------------------------------------------------------------------*/
+extern struct _MAILBOX mb;    
+
+struct _MUX mx;
+    
+// Sigma delta order MSB to LSB
+// BS4, BS3, BS2, BS1, BS0    
+// SDV2, SDI2, SDV1, SDI1, SD0    
+
+// D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity      
+// D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)
+// D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)      
+// D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)
+    
+    //  2 = 010
+    //  1 = 001
+    //  0 = 000
+    // -1 = 111
+    // -2 = 110
+
+/*----------------------------------------------------------------------------
+ *        module functions
  *----------------------------------------------------------------------------*/
 
-extern int main (void)  
-{
-
-        Main_Config();
-        Clock_Config();        
-        Sense_Config();
-        DSP_Config();
-        Init_state();
-        mb.repeat = true;
-       
-        waitKey();
-        //Sense_Dump_param();    
-        
-	while (mb.repeat) {
-          Next_state();  // next action to do  
-          if (mb.count*BSIZE > round(SAMPLES_NUMBER)) mb.repeat = false;
+  static void Load_BS(void) {
+ 
+    mx.sd0  = (int8_t)mb.BS0[0];
+    mx.sdI1 = (int8_t)mb.BS1[0];
+    mx.sdV1 = (int8_t)mb.BS2[0];
+    mx.sdI2 = (int8_t)mb.BS3[0];
+    mx.sdV2 = (int8_t)mb.BS4[0];
           
         }
-}
+        
+        
+  static  void bs_2_bin(struct _MUX * mux) {
+      mux->SD0[0] = mux->sd0 & B0_msk;  
+      mux->SD0[1] = mux->sd0 & B1_msk;  
+      mux->SD0[2] = mux->sd0 & B2_msk; 
+      
+      mux->SDI1[0] = mux->sdI1 & B0_msk;  
+      mux->SDI1[1] = mux->sdI1 & B1_msk;  
+      mux->SDI1[2] = mux->sdI1 & B2_msk; 
+      
+      mux->SDV1[0] = mux->sdV1 & B0_msk;  
+      mux->SDV1[1] = mux->sdV1 & B1_msk;  
+      mux->SDV1[2] = mux->sdV1 & B2_msk;      
+      
+      mux->SDI2[0] = mux->sdI2 & B0_msk;  
+      mux->SDI2[1] = mux->sdI2 & B1_msk;  
+      mux->SDI2[2] = mux->sdI2 & B2_msk; 
+      
+      mux->SDV2[0] = mux->sdV2 & B0_msk;  
+      mux->SDV2[1] = mux->sdV2 & B1_msk;  
+      mux->SDV2[2] = mux->sdV2 & B2_msk; 
+      
+    }
+
+  static void mxcoder(void) {
+      Load_BS();
+      bs_2_bin(&mx);
+    } 
+ 
+  
+    void Print_bs_2_bin(void ) {
+      mxcoder();
+      printf(" SD: %d  hex: %x  ----> %d %d %d", mx.sd0, mx.sd0, mx.SD0[2],mx.SD0[1],mx.SD0[0]); 
+      //Print_int8_to_bin(SD0);
+      printf( "\r\n");
+        
+    }
+    
+
 /** \endcond */
 /* ---------------------------------------------------------------------------- */
 /*                  Microchip Microcontroller Software Support                  */
@@ -72,4 +110,3 @@ extern int main (void)
 /* NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, */
 /* EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           */
 /* ---------------------------------------------------------------------------- */
-
