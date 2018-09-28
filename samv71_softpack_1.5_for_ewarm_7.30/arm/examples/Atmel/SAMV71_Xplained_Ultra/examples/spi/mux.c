@@ -16,11 +16,6 @@ struct _MUX mx;
 // Sigma delta order MSB to LSB
 // BS4, BS3, BS2, BS1, BS0    
 // SDV2, SDI2, SDV1, SDI1, SD0    
-
-// D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity      
-// D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)
-// D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)      
-// D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)
     
     //  2 = 010
     //  1 = 001
@@ -66,18 +61,43 @@ struct _MUX mx;
       
     }
 
-  static void mxcoder(void) {
+  static void mxcode(void) {
+    // D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity      
+    // D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)
+    // D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)      
+    // D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)
       Load_BS();
       bs_2_bin(&mx);
+    // Change on posedge
+      mx.D3[0] = mx.SDI1[0]; mx.D3[1] = mx.SDV1[1]; mx.D3[2] = mx.SDI2[2]; mx.D3[3] = false; 
+      mx.D2[0] = mx.SD0[2];  mx.D2[1] = mx.SDV1[0]; mx.D2[2] = mx.SDI2[1]; mx.D2[3] = mx.SDV2[2];
+      mx.D1[0] = mx.SD0[1];  mx.D1[1] = mx.SDI1[2]; mx.D1[2] = mx.SDI2[0]; mx.D1[3] = mx.SDV2[1]; 
+      mx.D0[0] = mx.SD0[0];  mx.D0[1] = mx.SDI1[1]; mx.D0[2] = mx.SDV1[2]; mx.D0[3] = mx.SDV2[0];
+      mx.Fsync[0] = false; mx.Fsync[1] = false; mx.Fsync[2] = false; mx.Fsync[3] = true;
     } 
  
+ static void Drive_IO(void) {
+     uint32_t i; 
+          for (i = 0; i < 5; i++) {
+      MUX_ctrl(0,mx.D0[i]);
+      MUX_ctrl(1,mx.D1[i]);
+      MUX_ctrl(2,mx.D2[i]);
+      MUX_ctrl(3,mx.D3[i]);
+      MUX_ctrl(4,mx.Fsync[i]);
+      Wait(1);
+      }
+ }  
+  
   
     void Print_bs_2_bin(void ) {
-      mxcoder();
-      printf(" SD: %d  hex: %x  ----> %d %d %d", mx.sd0, mx.sd0, mx.SD0[2],mx.SD0[1],mx.SD0[0]); 
-      //Print_int8_to_bin(SD0);
-      printf( "\r\n");
-        
+  
+      mxcode();
+      //printf(" SD: %d  hex: %x  ----> %d %d %d", mx.sd0, mx.sd0, mx.SD0[2],mx.SD0[1],mx.SD0[0]); 
+      //or// Print_int8_to_bin(mx.sd0);
+      //printf( "\r\n");
+      Drive_IO();
+ 
+      
     }
     
 

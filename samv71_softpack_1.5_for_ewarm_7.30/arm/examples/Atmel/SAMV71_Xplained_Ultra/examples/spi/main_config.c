@@ -11,6 +11,9 @@
  *----------------------------------------------------------------------------*/
 static uint32_t dbg_baudrate = 115200;
 extern struct _MAILBOX mb;   
+//Pin for muxout
+	static const Pin mux_pins[] = PINS_MUXout;
+	static const uint32_t num_mux = PIO_LISTSIZE(mux_pins);
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -64,7 +67,7 @@ dsp_compute
 1	1	1	7
 */
 }
-void Next_state(void) {
+void Next_action(void) {
   uint32_t state;
   uint32_t i;
   
@@ -110,6 +113,46 @@ void Next_state(void) {
 }
  
 
+/**
+ *  Turns the given mux on if it exists; otherwise does nothing.
+ *  \param mux  Number of the D0,1,2,3Fsync to turn on.
+ *  \return 1 if the pin has been turned on; 0 otherwise.
+ */
+uint32_t MUX_Set(uint32_t dw)
+{
+	/* Check if pin exists */
+	if (dw >= num_mux)
+		return 0;
+
+	/* Turn LED on */
+	if (mux_pins[dw].type == PIO_OUTPUT_0)
+		PIO_Set(&mux_pins[dw]);
+	else
+		PIO_Clear(&mux_pins[dw]);
+
+	return 1;
+}
+
+uint32_t MUX_Clear(uint32_t dw)
+{
+	/* Check if pin exists */
+	if (dw >= num_mux)
+		return 0;
+
+	/* Turn LED off */
+	if (mux_pins[dw].type == PIO_OUTPUT_0)
+		PIO_Clear(&mux_pins[dw]);
+	else
+		PIO_Clear(&mux_pins[dw]);
+
+	return 1;
+}
+
+void MUX_ctrl(uint32_t pinnb, bool level)
+{
+if (level) MUX_Set(pinnb); else MUX_Clear(pinnb);
+}
+
 void Main_Config(void)
 {
 
@@ -127,6 +170,14 @@ void Main_Config(void)
 	printf("\n\r--- SPI Example %s --\n\r", SOFTPACK_VERSION);
 	printf("--- %s\n\r", BOARD_NAME);
 	printf("--- Compiled: %s %s With %s--\n\r", __DATE__, __TIME__, COMPILER_NAME);
+        
+        // Pin for muxout
+	// static const Pin mux_pins[] = PINS_MUXout;
+	// static const uint32_t num_mux = PIO_LISTSIZE(mux_pins);
+         
+        PIO_Configure(mux_pins, PIO_LISTSIZE(mux_pins)); 
+        
+        
         
 
 }

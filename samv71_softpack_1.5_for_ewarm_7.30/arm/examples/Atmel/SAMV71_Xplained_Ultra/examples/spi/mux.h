@@ -25,6 +25,7 @@ struct _MUX  {
     bool D1[4];
     bool D2[4];
     bool D3[4];
+    bool Fsync[4];
     
   } __attribute__((packed)) ;
 

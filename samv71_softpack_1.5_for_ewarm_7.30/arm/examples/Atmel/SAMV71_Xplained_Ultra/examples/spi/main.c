@@ -32,14 +32,16 @@ extern int main (void)
         Sense_Config();
         DSP_Config();
         Init_state();
+        
+        Sense_Dump_param(); 
+  
+        waitKey();
         mb.repeat = true;
        
-        waitKey();
-        //Sense_Dump_param();    
         
 	while (mb.repeat) {
-          Next_state();  // next action to do  
-          if (mb.count*BSIZE > round(SAMPLES_NUMBER)) mb.repeat = false;
+          Next_action();  // next action to do  
+          //if (mb.count*BSIZE > round(SAMPLES_NUMBER)) mb.repeat = false;
           
         }
 }
