@@ -29,7 +29,7 @@ struct _MUX  {
     
   } __attribute__((packed)) ;
 
-void Print_bs_2_bin(void);
+void BS_2_IO(void);
 
 #endif /* ! _MUX_H */
 

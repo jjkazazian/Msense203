@@ -78,18 +78,29 @@ struct _MUX mx;
  
  static void Drive_IO(void) {
      uint32_t i; 
-          for (i = 0; i < 5; i++) {
-      MUX_ctrl(0,mx.D0[i]);
-      MUX_ctrl(1,mx.D1[i]);
-      MUX_ctrl(2,mx.D2[i]);
-      MUX_ctrl(3,mx.D3[i]);
-      MUX_ctrl(4,mx.Fsync[i]);
+     uint32_t j; 
+     
+          for (i = 0; i < 4; i++) {
+            
+      IO_ctrl(0,mx.D0[i]);
+      IO_ctrl(1,mx.D1[i]);
+      IO_ctrl(2,mx.D2[i]);
+      IO_ctrl(3,mx.D3[i]);
+      IO_ctrl(4,mx.Fsync[i]);
+      IO_clear(5); // Clock capture
       Wait(1);
+      //for (j = 0; j < 100; j++) __asm("nop");
+      IO_set(5);  // Clock capture on rise
+      Wait(1);
+      PIO_Capture();  // try and remove
+      Wait(1);
+      
       }
+     
  }  
   
   
-    void Print_bs_2_bin(void ) {
+    void BS_2_IO(void ) {
   
       mxcode();
       //printf(" SD: %d  hex: %x  ----> %d %d %d", mx.sd0, mx.sd0, mx.SD0[2],mx.SD0[1],mx.SD0[0]); 

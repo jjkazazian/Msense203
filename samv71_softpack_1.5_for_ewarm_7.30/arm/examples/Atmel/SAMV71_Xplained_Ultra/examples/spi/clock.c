@@ -11,6 +11,7 @@
 /** Pin PCK0 (PIO_PD13B_PCK0 Peripheral C) */
 const Pin pinPCK = PIN_PCK0;
 
+
 /** Clock backup values */
 static uint32_t masterClk;
 static uint32_t pllaClk;
@@ -18,9 +19,31 @@ static uint32_t masterClkDivision;
 static uint32_t pllMultiplier;
 static uint32_t masterClkPrescaler;
 
+
 /*----------------------------------------------------------------------------
  *        module functions
  *----------------------------------------------------------------------------*/
+
+
+
+static void Timer_Counter(void)
+{
+static uint32_t Div; 
+static uint32_t TcClks; 
+
+	PMC_EnablePeripheral(ID_TC1);
+
+printf("\n\r=======================Timer counter ========================\n\r" );
+
+printf(" timer  ok: %d \n\r", TC_FindMckDivisor(4000000, BOARD_MCK, &Div, &TcClks, BOARD_MCK));
+printf(" timer div: %d \n\r", Div );
+printf(" timer clk: %d \n\r", TcClks );
+
+	TC_Configure(TC1, 0, TcClks);
+        TC_Start(TC1, 0);
+         
+
+}
 
 void Clock_Config(void)
 {
@@ -30,10 +53,14 @@ void Clock_Config(void)
 
 	/* Configure PCK0 as peripheral */
         CalcPmcParam();
+        PMC_EnablePeripheral(ID_PIOC);
         Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75));
         
 	printf("\n\r --- Current PMC clock from start-up configuration --- \n\r");
+        Timer_Counter();
 	DumpPmcConfiguration();
+        
+
 }
 
 void DumpPmcConfiguration(void)
@@ -61,7 +88,7 @@ void DumpPmcConfiguration(void)
 			'X' : ' ';
 	printf("\n\r    SLOW_CLK [%c]\n\r    MAIN_CLK [%c]\n\r    PLLA_CLK [%c]\n\r    UPLL_CLK [%c]\n\r",
 			ucChar[0],ucChar[1],ucChar[2],ucChar[3]);
-	printf("\n\r    masterClkPrescaler= %u \n\r    Master clock=       %uMHz \n\r",
+	printf("\n\r    masterClkPrescaler= %u \n\r    Master clock      = %uMHz \n\r",
 			(unsigned int)masterClkPrescaler, (unsigned int)masterClk/1000000);
         
 	printf("\n\r Programmable clock\n\r");

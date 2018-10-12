@@ -116,6 +116,7 @@ static int32_t Sinus(uint32_t index, uint32_t nb)
 {
   float s;  
   s = amp*sin(index*T*2*pi*fain/M+2*pi/nb);
+  //s = amp*arm_sin_f32(index*T*2*pi*fain/M+2*pi/nb);
   return (int)round(s);
 }
 
@@ -153,25 +154,23 @@ cic->int3 = cic->int3 + cic->int2;
 cic->int2 = cic->int2 + cic->int1;
 cic->int1 = cic->int1 + mod->bs;
 
-if (cic->osr == CICOSR) { // decimator
-                  
-          cic->osr=0;
-          flag_osr = true;
-          
-          // derivator
-          cic->der1    = cic->int3;
-          cic->der2    = cic->der1 - cic->zder1;
-          cic->der3    = cic->der2 - cic->zder2;
-          cic->xout    = cic->der3 - cic->zder3;
+    if (cic->osr == CICOSR) { // decimator
+                      
+              cic->osr=0;
+              flag_osr = true;
+              
+              // derivator
+              cic->der1    = cic->int3;
+              cic->der2    = cic->der1 - cic->zder1;
+              cic->der3    = cic->der2 - cic->zder2;
+              cic->xout    = cic->der3 - cic->zder3;
 
-          cic->zder1   = cic->der1;
-          cic->zder2   = cic->der2;
-          cic->zder3   = cic->der3;   
+              cic->zder1   = cic->der1;
+              cic->zder2   = cic->der2;
+              cic->zder3   = cic->der3;   
 
-          cic->xout = CICScal_sirag*cic->xout;
-         
-}  
-  
+              cic->xout = CICScal_sirag*cic->xout;     
+    }   
 }
 
 static void Decimation(void)  {
@@ -219,10 +218,10 @@ void DSP(void)
 
           if (nsinus == N-1) nsinus=0; else nsinus++;
           mod0.xin = Sinus(nsinus,1);
-          mod1.xin = Sinus(nsinus,2);
-          mod2.xin = Sinus(nsinus,3);
-          mod3.xin = Sinus(nsinus,4);
-          mod4.xin = Sinus(nsinus,5);
+          mod1.xin = mod0.xin;
+          mod2.xin = mod0.xin;
+          mod3.xin = mod0.xin;
+          mod4.xin = mod0.xin;
        
           Modulator(&mod0);
           Modulator(&mod1);
@@ -230,8 +229,14 @@ void DSP(void)
           Modulator(&mod3);
           Modulator(&mod4);
           
-          // Combfilter(&mod0,&cic0);   
-          // Combfilter(&mod1,&cic1);           
+           
+           Combfilter(&mod0,&cic0);   
+           Combfilter(&mod1,&cic1);    
+           Combfilter(&mod2,&cic2);   
+           Combfilter(&mod2,&cic2);   
+           Combfilter(&mod2,&cic2);   
+          
+           
           // Decimation();
           
           BS2mb();

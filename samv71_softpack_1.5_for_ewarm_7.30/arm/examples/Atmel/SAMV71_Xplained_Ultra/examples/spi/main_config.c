@@ -1,26 +1,27 @@
-/* jj kazazaian 2018*/
+/* jj kazazaian 2018 */
 /*----------------------------------------------------------------------------
  *        Headers
  *----------------------------------------------------------------------------*/
 #include "include.h"
 #include "main_config.h"
-#include "dsp_sense.h"
-#include "mux.h"
+
+   
 /*----------------------------------------------------------------------------
  *        Local definitions
  *----------------------------------------------------------------------------*/
 static uint32_t dbg_baudrate = 115200;
-extern struct _MAILBOX mb;   
-//Pin for muxout
-	static const Pin mux_pins[] = PINS_MUXout;
-	static const uint32_t num_mux = PIO_LISTSIZE(mux_pins);
+extern struct _MAILBOX mb; 
 
+//Pin for muxout
+extern const Pin mux_pins[]       = PINS_MUXout;
+extern const Pin capture_pins[]   = PINS_capture;
+        
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
 void waitKey(void)
 {
-	//printf("-I- Press any key to Continue...\n\r");
+	printf("\n\r-I- Press any key to Continue...\n\r");
 	while (1) {
 		if (DBG_GetChar()!= 0)
 			break;
@@ -34,7 +35,7 @@ static unsigned int_to_int(unsigned k) {
 
 void Print_int8_to_bin(uint8_t k)
 { // 8 bits only
-  printf(" Data binary code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
+  printf(" Code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
 }
 
 
@@ -73,6 +74,7 @@ void Next_action(void) {
   
   state = Truth_table(); 
 
+
   //printf("  %d %d %d  state: %d next: %d  \r\n", mb.dsp_compute, mb.buffer_print, mb.buffer_full, state, mb.next_state);
   
   switch (mb.next_state) {
@@ -82,17 +84,23 @@ void Next_action(void) {
 		case 1:  // do nothing
                         Init_state();
                 break;        
-		case 2: // print bs buffer
+		case 2: // print bs buffer to io
                        //for (i = 0; i < BSIZE; i++) printf ("  %d \r\n", mb.BS1[i]);
-                       Print_bs_2_bin();
+             
+                       BS_2_IO(); 
+                     
+                       mb.count++;
                        mb.buffer_print = false;
 		break;            
                 case 3: // do nothing      
                        Init_state();
 		break;   
                 case 4: // dsp next step computation
+                       
                        DSP();
-                       mb.count++;
+                       mb.buffer_full =  true;
+                      
+                       
                 break;
                 case 5: // stop dsp
                        mb.dsp_compute = false;
@@ -118,39 +126,20 @@ void Next_action(void) {
  *  \param mux  Number of the D0,1,2,3Fsync to turn on.
  *  \return 1 if the pin has been turned on; 0 otherwise.
  */
-uint32_t MUX_Set(uint32_t dw)
+
+
+void IO_ctrl(uint32_t pinnb, bool level)
 {
-	/* Check if pin exists */
-	if (dw >= num_mux)
-		return 0;
-
-	/* Turn LED on */
-	if (mux_pins[dw].type == PIO_OUTPUT_0)
-		PIO_Set(&mux_pins[dw]);
-	else
-		PIO_Clear(&mux_pins[dw]);
-
-	return 1;
+      if (level) PIO_Set(&mux_pins[pinnb]); else PIO_Clear(&mux_pins[pinnb]);
 }
 
-uint32_t MUX_Clear(uint32_t dw)
+void IO_set(uint32_t pinnb)
 {
-	/* Check if pin exists */
-	if (dw >= num_mux)
-		return 0;
-
-	/* Turn LED off */
-	if (mux_pins[dw].type == PIO_OUTPUT_0)
-		PIO_Clear(&mux_pins[dw]);
-	else
-		PIO_Clear(&mux_pins[dw]);
-
-	return 1;
+ PIO_Set(&mux_pins[pinnb]);      
 }
-
-void MUX_ctrl(uint32_t pinnb, bool level)
+void IO_clear(uint32_t pinnb)
 {
-if (level) MUX_Set(pinnb); else MUX_Clear(pinnb);
+ PIO_Clear(&mux_pins[pinnb]);      
 }
 
 void Main_Config(void)
@@ -172,14 +161,17 @@ void Main_Config(void)
 	printf("--- Compiled: %s %s With %s--\n\r", __DATE__, __TIME__, COMPILER_NAME);
         
         // Pin for muxout
-	// static const Pin mux_pins[] = PINS_MUXout;
-	// static const uint32_t num_mux = PIO_LISTSIZE(mux_pins);
-         
         PIO_Configure(mux_pins, PIO_LISTSIZE(mux_pins)); 
+        // Pin for capture
+        PIO_Configure(capture_pins, PIO_LISTSIZE(capture_pins)); 
+        PIOA->PIO_PPDDR |= PIO_PPDDR_P3; // board pullup
+        PIOA->PIO_PPDDR |= PIO_PPDDR_P4; // board pullup
+        PIOA->PIO_PPDER |= PIO_PPDER_P5;
+        PIOA->PIO_PPDER |= PIO_PPDER_P9;
+        PIOA->PIO_PPDER |= PIO_PPDER_P10;
         
+        mb.count=0;
         
-        
-
 }
 /** \endcond */
 /* ---------------------------------------------------------------------------- */

@@ -1,4 +1,5 @@
 //jj kazazian 2018//
+// Xult board R225 removed
 
 /*----------------------------------------------------------------------------
  *        Headers
@@ -11,6 +12,9 @@
 #include "clock.h"
 #include "spi_sense.h"
 #include "dsp_sense.h"
+#include "mux.h"
+#include "capture.h"
+
 /*----------------------------------------------------------------------------
  *        Local definitions
  *----------------------------------------------------------------------------*/
@@ -32,18 +36,24 @@ extern int main (void)
         Sense_Config();
         DSP_Config();
         Init_state();
-        
+        Capture_Config(PIOA);
+          
         Sense_Dump_param(); 
-  
+  while (1) {
         waitKey();
         mb.repeat = true;
        
-        
+        Enable_Capture();
 	while (mb.repeat) {
-          Next_action();  // next action to do  
-          //if (mb.count*BSIZE > round(SAMPLES_NUMBER)) mb.repeat = false;
           
+          Next_action();  // next action to do  
+          if (mb.count*BSIZE > SAMPLES_NUMBER) mb.repeat = false;
         }
+        
+        Disable_Capture();
+        PIO_Print_Buffer(); 
+        mb.count = 0;
+  }
 }
 /** \endcond */
 /* ---------------------------------------------------------------------------- */
