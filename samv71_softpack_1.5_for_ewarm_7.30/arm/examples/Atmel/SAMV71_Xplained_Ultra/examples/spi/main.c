@@ -37,6 +37,7 @@ extern int main (void)
         DSP_Config();
         Init_state();
         Capture_Config(PIOA);
+        //PIO_Reset_Buffer();
           
         Sense_Dump_param(); 
   while (1) {
@@ -50,9 +51,9 @@ extern int main (void)
           if (mb.count*BSIZE > SAMPLES_NUMBER) mb.repeat = false;
         }
         
-        Disable_Capture();
-        PIO_Print_Buffer(); 
+        _pc_dmaTransfer();
         mb.count = 0;
+       
   }
 }
 /** \endcond */

@@ -91,8 +91,8 @@ struct _MUX mx;
       Wait(1);
       //for (j = 0; j < 100; j++) __asm("nop");
       IO_set(5);  // Clock capture on rise
-      Wait(1);
-      PIO_Capture();  // try and remove
+      //Wait(1);
+      //PIO_Capture();  // try and remove
       Wait(1);
       
       }
