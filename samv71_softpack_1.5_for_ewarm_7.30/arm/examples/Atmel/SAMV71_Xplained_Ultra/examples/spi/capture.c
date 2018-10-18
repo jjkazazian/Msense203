@@ -13,13 +13,11 @@
  *----------------------------------------------------------------------------*/
 extern struct _MAILBOX mb;    
 
-/** PIO receive buffer. */
-uint32_t pio_rx_buffer[SIZE_BUFF_RECEPT];
-
 
 // to remove later when DMA works
-bool pio_rx_buffer_error[SIZE_BUFF_RECEPT];
+bool pio_rx_buffer_error[ND];
 uint32_t count;
+
 
 // DMA
 
@@ -49,16 +47,17 @@ static void _pc_Callback(int dummy, void* pArg)
 	dummy = dummy;
 	pArg = pArg;
 	//Processing the DMA buffer //////////////////////////////////////
-        PIO_Print_Buffer(); 
+        mb.dmacall =  false;
+        
 	}
 
 /*\brief Configure parallele capture DMA and start DMA transfer.*/
 void _pc_dmaTransfer(void)
-{
-	PcCommand.RxSize   = SIZE_BUFF_RECEPT;
-	PcCommand.pRxBuff  = pio_rx_buffer;
+{       
+        PcCommand.RxSize   = ND;     
+	PcCommand.pRxBuff  = mb.A;
 	PcCommand.callback = (PcCallback)_pc_Callback;
-        Pc_ConfigureDma(&Pc ,PIOA ,ID_PIOA,&dmad);
+        Pc_ConfigureDma(&Pc ,PIOA ,ID_PIOA, &dmad);
 	Pc_SendData(&Pc, &PcCommand);
 }
 /**
@@ -89,39 +88,64 @@ static void PIO_Capture_Buffer(const Pio *p_pio)
       uint32_t data;
 
       pio_rx_buffer_error[count] = pio_capture_read(p_pio, &data); 
-       
-      
-      pio_rx_buffer[count] = data & 0x1F; 
-      if (count > SIZE_BUFF_RECEPT) count=0; else count++;
      
-
-
-      
+      mb.A[count] = data & 0x1F; 
+      if (count > ND) count=0; else count++;
+    
 }
 
-void PIO_Print_Buffer(void) {
+void PIO_Copy_Buffer(uint32_t *in, uint32_t *out ) {
+      uint32_t i;
+       for (i = 0; i < ND; i++) {
+              out[i] = in[i];   
+       }
+}
+/*
+void PIO_Print_Buffer(uint32_t *in) {
       uint32_t i;
       printf("\n\r");
-       for (i = 0; i < SIZE_BUFF_RECEPT; i++) {
+       for (i = 0; i < ND; i++) {
+         
               printf("   Data [%02d] = " , i);  
-              Print_int8_to_bin((uint8_t)(pio_rx_buffer[i]& 0x1F));
+              
+              Print_int8_to_bin((uint8_t)(in[i]& 0x1F));
+              
+              
               printf("\n\r");
+              
        }
-
 }
-
-void PIO_Reset_Buffer(void) {
-      uint32_t i;
+*/
+void PIO_Print_Buffer(uint32_t *in) {
+      uint32_t i, j, k;
+      uint8_t data;
       printf("\n\r");
-       for (i = 0; i < SIZE_BUFF_RECEPT; i++) {
-         pio_rx_buffer[i] = 0;
+       for (i = 0; i < ND/4; i++) {
+         for (j = 0; j < 4; j++) {
+           
+              printf("   Data [%02d] = " , k);  
+              data = (uint8_t)((in[i] >> 8*j) & 0x000F);
+              Print_int8_to_bin(data);
+              printf("\n\r");
+              k++;
+         }
        }
-
 }
 
 
-void PIO_Capture(void) {
-  PIO_Capture_Buffer(PIOA);
+void PIO_Clear_Buffer(uint32_t *in) {
+      uint32_t i;
+       for (i = 0; i < ND; i++) {
+         in[i] = 0;
+       }
+}
+
+
+void PIO_Capture_DMA(void) {
+  //PIO_Capture_Buffer(PIOA);
+  
+    /* initialize PIO DMA mode*/ 
+    _pc_dmaTransfer();
  
 }
 
@@ -148,18 +172,18 @@ void Capture_Config(Pio *pio)
     /* disable pio capture*/
     pio->PIO_PCMR &= ~((uint32_t)PIO_PCMR_PCEN);
 
-      /* enable rxbuff interrupt*/
-    pio->PIO_PCIER |= PIO_PCIER_RXBUFF;
-
+      /* disable all interrupt*/
+    //pio->PIO_PCIER |= PIO_PCIER_DRDY;
+      pio->PIO_PCIDR |= PIO_PCIDR_ALL;
+  
     /* 8bit width*/
     pio->PIO_PCMR |= PIO_PCMR_DSIZE_BYTE;
 
     /* always sampling on clock*/
     pio->PIO_PCMR |= PIO_PCMR_ALWYS;
     
-    /* initialize PIO DMA mode*/ 
-    _pc_dmaTransfer();
     
+    Enable_Capture(); 
 
 /*    
  data is stored in PIO_PCRHR and the flag DRDY is set to one in PIO_PCISR.

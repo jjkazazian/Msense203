@@ -19,6 +19,7 @@
  *        Local definitions
  *----------------------------------------------------------------------------*/
   struct _MAILBOX mb;
+
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
@@ -37,23 +38,45 @@ extern int main (void)
         DSP_Config();
         Init_state();
         Capture_Config(PIOA);
-        //PIO_Reset_Buffer();
-          
-        Sense_Dump_param(); 
-  while (1) {
-        waitKey();
-        mb.repeat = true;
-       
-        Enable_Capture();
-	while (mb.repeat) {
-          
-          Next_action();  // next action to do  
-          if (mb.count*BSIZE > SAMPLES_NUMBER) mb.repeat = false;
-        }
+        Enable_Capture();  
         
-        _pc_dmaTransfer();
-        mb.count = 0;
+         
+        //Sense_Dump_param(); 
+         mb.dmacall =  true;
        
+  while (1) {
+             
+        waitKey();
+        
+        PIO_Capture_DMA();
+        
+        mb.count = 0;
+        mb.dmacall = true;
+        mb.repeat  = true;
+        
+        
+	while (mb.repeat) { // PIO signal generation
+                       DSP();
+                       BS_2_IO(); 
+                       mb.count++;
+                    
+         //Next_action();     // next action to do  
+         
+             if (mb.count*BSIZE == SAMPLES_NUMBER) {
+               mb.repeat = false;
+               break;
+             }
+        }
+           
+        while(mb.dmacall);
+        
+      
+       PIO_Copy_Buffer(mb.A, mb.B);
+       
+       PIO_Print_Buffer(mb.A);
+
+       PIO_Clear_Buffer(mb.B); 
+       PIO_Clear_Buffer(mb.A);
   }
 }
 /** \endcond */

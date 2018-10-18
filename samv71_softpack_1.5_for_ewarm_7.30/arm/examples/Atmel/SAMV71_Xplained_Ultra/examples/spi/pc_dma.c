@@ -77,13 +77,12 @@ static uint8_t _PcConfigureDmaChannels(PcDma *pPc)
 
 /**
  * \brief Configure the DMA source and destination with Linker List mode.
- * \param pXdmad Pointer to a PcDma instance
+ * \param pXdmad   Pointer to a PcDma instance
  * \param pCommand Pointer to PcCmd instance
- * \param PcCmd Pointer to command
+ * \param PcCmd    Pointer to command
  */
 
-static uint8_t _Pc_configureLinkList(Pio *pPcHw, void *pXdmad,
-						 PcCmd *pCommand)
+static uint8_t _Pc_configureLinkList(Pio *pPcHw, void *pXdmad, PcCmd *pCommand)
 {
 	uint32_t xdmaCndc, xdmaInt;
 	sXdmadCfg xdmadRxCfg;
@@ -98,12 +97,12 @@ static uint8_t _Pc_configureLinkList(Pio *pPcHw, void *pXdmad,
 						 pCommand->RxSize;
 
 	xdmadRxCfg.mbr_da = (uint32_t)pCommand->pRxBuff;
-	xdmadRxCfg.mbr_sa = (uint32_t) & pPcHw->PIO_PCRHR ;  ///////////////& 0x1F////////////
+	xdmadRxCfg.mbr_sa = (uint32_t) &pPcHw->PIO_PCRHR;  
 	xdmadRxCfg.mbr_cfg = XDMAC_CC_TYPE_PER_TRAN |
 						 XDMAC_CC_MBSIZE_SINGLE |
 						 XDMAC_CC_DSYNC_PER2MEM |
 						 XDMAC_CC_CSIZE_CHK_1 |
-						 XDMAC_CC_DWIDTH_WORD |
+						 XDMAC_CC_DWIDTH_BYTE |
 						 XDMAC_CC_SIF_AHB_IF1 |
 						 XDMAC_CC_DIF_AHB_IF1 |
 						 XDMAC_CC_SAM_FIXED_AM |
@@ -141,9 +140,9 @@ static uint8_t _Pc_configureLinkList(Pio *pPcHw, void *pXdmad,
  * The driver will uses DMA channel 0 for RX .
  * The DMA channels are freed automatically when no DMA command processing.
  *
- * \param pPc Pointer to a PcDma instance.
- * \param pPcHw Associated Pc peripheral.
- * \param PcId  Pc peripheral identifier.
+ * \param pPc    Pointer to a PcDma instance.
+ * \param pPcHw  Associated Pc peripheral.
+ * \param PcId   Pc peripheral identifier.
  * \param pDmad  Pointer to a Dmad instance.
  */
 uint32_t Pc_ConfigureDma(PcDma *pPc ,
@@ -151,7 +150,7 @@ uint32_t Pc_ConfigureDma(PcDma *pPc ,
 					uint8_t PcId,
 					sXdmad *pXdmad)
 {
-	/* Initialize the Afe structure */
+	/* Initialize the parallel capture structure */
 	pPc->pPcHw = pPcHw;
 	pPc->pcId  = PcId;
 	pPc->semaphore = 1;
@@ -165,9 +164,9 @@ uint32_t Pc_ConfigureDma(PcDma *pPc ,
  *  return as soon as the transfer is started.
  *
  * \param pPc  Pointer to a PcDma instance.
- * \param pCommand Pointer to the Afe command to execute.
+ * \param pCommand Pointer to the parallel capture command to execute.
  * \returns 0 if the transfer has been started successfully; otherwise returns
- * AFE_ERROR_LOCK is the driver is in use, or AFE_ERROR if the command is not
+ * PC_ERROR_LOCK is the driver is in use, or PC_ERROR if the command is not
  * valid.
  */
 uint32_t Pc_SendData(PcDma *pPc, PcCmd *pCommand)
@@ -196,7 +195,7 @@ uint32_t Pc_SendData(PcDma *pPc, PcCmd *pCommand)
 	if (_Pc_configureLinkList(pPcHw, pPc->pXdmad, pCommand))
 		return PC_ERROR_LOCK;
 
-	Enable_Capture();   ///////////////////////////////////////////////////
+	  ///////////////////////////////////////////////////
 
 	/* Start DMA 0(RX) */
 	if (XDMAD_StartTransfer(pPc->pXdmad, pcDmaRxChannel))

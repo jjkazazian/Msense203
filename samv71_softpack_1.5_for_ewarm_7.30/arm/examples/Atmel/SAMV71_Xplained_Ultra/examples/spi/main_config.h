@@ -6,9 +6,9 @@
 #include "capture.h"
 
 
-#define BSIZE 1
-#define SAMPLES_NUMBER 8
-
+#define BSIZE 1    // keep at 1
+#define SAMPLES_NUMBER 8    // numbers of signal samples of bitstream 
+#define ND SAMPLES_NUMBER*4 // numbers of acquisitions
 
 
 
@@ -25,9 +25,15 @@ struct _MAILBOX  {
     int32_t D3[4];
     int32_t Fsync[4];
     */
-    uint32_t idx; // buffer size counter
-
-    bool repeat;      // stop the program
+    
+    /** PIO receive buffer. */
+    uint32_t A[SAMPLES_NUMBER];
+    uint32_t B[SAMPLES_NUMBER];
+    uint32_t C[SAMPLES_NUMBER];
+    
+    uint32_t idx;     // buffer size counter
+    bool dmacall;     // dma interupt and callback done
+    bool repeat;      // enable the signal generation
     uint32_t count;   // nb of samples = count*BSIZE
     
     bool dsp_compute;   // start DSP computation
@@ -35,7 +41,7 @@ struct _MAILBOX  {
     bool buffer_print;  // allow to print bs on uart
     uint8_t next_state; // truth output table {0,1,2,3.. ,31} 
     
-  } __attribute__((packed)) ;
+  } ;
 
 #define PIN_D1     {PIO_PA6,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
 #define PIN_D0     {PIO_PD30, PIOD, ID_PIOD, PIO_OUTPUT_0, PIO_DEFAULT}

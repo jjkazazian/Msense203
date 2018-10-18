@@ -86,10 +86,11 @@ void Next_action(void) {
                 break;        
 		case 2: // print bs buffer to io
                        //for (i = 0; i < BSIZE; i++) printf ("  %d \r\n", mb.BS1[i]);
-             
+                  
+                       //DSP();
                        BS_2_IO(); 
-                     
                        mb.count++;
+                       
                        mb.buffer_print = false;
 		break;            
                 case 3: // do nothing      
