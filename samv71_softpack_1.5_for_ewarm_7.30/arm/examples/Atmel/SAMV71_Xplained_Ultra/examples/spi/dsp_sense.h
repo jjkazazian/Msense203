@@ -42,5 +42,8 @@ struct _CIC  {
 void Sinus_Gen(void);
 void DSP_Config(void);
 void DSP(void);
+void Copy_BS_to_Buffer(uint32_t index);
+void Print_TxBS_Buffer(void); 
+void Print_RxBS_Buffer(void); 
 
 #endif /* ! _DSP_SENSE_H */

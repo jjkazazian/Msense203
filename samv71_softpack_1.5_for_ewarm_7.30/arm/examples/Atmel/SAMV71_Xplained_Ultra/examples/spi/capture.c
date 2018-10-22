@@ -100,31 +100,16 @@ void PIO_Copy_Buffer(uint32_t *in, uint32_t *out ) {
               out[i] = in[i];   
        }
 }
-/*
-void PIO_Print_Buffer(uint32_t *in) {
-      uint32_t i;
-      printf("\n\r");
-       for (i = 0; i < ND; i++) {
-         
-              printf("   Data [%02d] = " , i);  
-              
-              Print_int8_to_bin((uint8_t)(in[i]& 0x1F));
-              
-              
-              printf("\n\r");
-              
-       }
-}
-*/
+
 void PIO_Print_Buffer(uint32_t *in) {
       uint32_t i, j, k;
       uint8_t data;
       printf("\n\r");
-       for (i = 0; i < ND/4; i++) {
+       for (i = 0; i < SAMPLES_NUMBER; i++) {
          for (j = 0; j < 4; j++) {
            
               printf("   Data [%02d] = " , k);  
-              data = (uint8_t)((in[i] >> 8*j) & 0x000F);
+              data = (uint8_t)((in[i] >> 8*j) & 0x1F);
               Print_int8_to_bin(data);
               printf("\n\r");
               k++;
@@ -132,6 +117,72 @@ void PIO_Print_Buffer(uint32_t *in) {
        }
 }
 
+void PIO_Unpack_Buffer(uint32_t *in) {
+      uint32_t i, j, k;
+      uint32_t n = 0; // count the frame start after sync
+      uint32_t csum = 0;  //Check sum
+      uint8_t data;
+      uint8_t sync;
+      uint8_t  dmx[4];
+      bool synchronized = false;
+      bool dmx_full=false;
+      
+
+       for (i = 0; i < SAMPLES_NUMBER; i++) {
+         for (j = 0; j < 4; j++) {
+   
+              data = (uint8_t)((in[i] >> 8*j) & 0x1F);  // byte data extraction from 32 bits
+              sync = (uint8_t)((data  >> 4)   & 0x1);   // synchro bit extraction
+              
+              
+              csum = csum + sync;
+              
+              //if (!synchronized && sync==1) synchronized=true;
+              
+              if (synchronized) {
+              dmx[n] = (uint8_t)(data & 0xF);
+              n++;
+                if (n == 4) {n=0; dmx_full = true;}
+              }
+              
+              if (sync==1) synchronized = true;  
+              
+              //printf("   sync [%02d] = %02d \n\r" ,k, sync);
+              
+              if (dmx_full) {
+              //printf("   D0= %02d   D1= %02d   D2= %02d   D3= %02d   \n\r" ,dmx[0],dmx[1],dmx[2],dmx[3]);
+              mb.to_demux[0] = dmx[0];
+              mb.to_demux[1] = dmx[1];
+              mb.to_demux[2] = dmx[2];
+              mb.to_demux[3] = dmx[3];
+              
+              demxcode();
+
+              mb.BS0rx[i] = mb.demux_to_bs[0];
+              mb.BS1rx[i] = mb.demux_to_bs[1];
+              mb.BS2rx[i] = mb.demux_to_bs[2];
+              mb.BS3rx[i] = mb.demux_to_bs[3];
+              mb.BS4rx[i] = mb.demux_to_bs[4];
+              
+              printf("   B0  [%02d]  = %02d   B1= %02d   B2= %02d   B3= %02d    B4= %02d \n\r" ,i,mb.BS0rx[i],mb.BS1rx[i],mb.BS2rx[i],mb.BS3rx[i],mb.BS4rx[i]);
+              dmx_full = false;
+              } else { // padding with zeros
+              mb.BS0rx[i] = 0;
+              mb.BS1rx[i] = 0;
+              mb.BS2rx[i] = 0;
+              mb.BS3rx[i] = 0;
+              mb.BS4rx[i] = 0;
+                
+                
+              }
+              
+                 
+              k++;
+         }
+       }
+       printf("\n\r");
+       printf("   Check sum  = %02d \n\r" , csum); 
+}
 
 void PIO_Clear_Buffer(uint32_t *in) {
       uint32_t i;

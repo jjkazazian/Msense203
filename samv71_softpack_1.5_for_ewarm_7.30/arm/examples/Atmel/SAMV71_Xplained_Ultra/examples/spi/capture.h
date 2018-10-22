@@ -5,7 +5,9 @@
 /*----------------------------------------------------------------------------
  *       Defines
  *----------------------------------------------------------------------------*/
-
+#define sync_pos    4       
+#define sync_msk    (0x1u << sync_pos) 
+   
 #define PIO_PCIDR_ALL (0xFu << 0)
    
 void Capture_Config(Pio *pio);
@@ -13,6 +15,7 @@ void Capture_Config(Pio *pio);
 void PIO_Print_Buffer(uint32_t *in); 
 void PIO_Copy_Buffer(uint32_t *in, uint32_t *out);
 void PIO_Clear_Buffer(uint32_t *in);
+void PIO_Unpack_Buffer(uint32_t *in);
 
 void PIO_Capture_DMA(void);
 void Enable_Capture(void);

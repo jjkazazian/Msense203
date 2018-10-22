@@ -59,6 +59,44 @@ static bool flag_osr;
  *        module functions
  *----------------------------------------------------------------------------*/
 
+void Copy_BS_to_Buffer(uint32_t index) {
+  
+    // generated bit stream
+    mb.BS0tx[index]=mb.BS0[0];
+    mb.BS1tx[index]=mb.BS0[1];
+    mb.BS2tx[index]=mb.BS0[2];
+    mb.BS3tx[index]=mb.BS0[3];
+    mb.BS4tx[index]=mb.BS0[4];
+  
+}
+
+void Print_TxBS_Buffer(void) {
+  uint32_t i;
+   
+  // generated bit stream
+  
+ for (i = 0; i < SAMPLES_NUMBER; i++) {
+   
+   printf("   BS0 [%02d] = %02d\r\n" , i, mb.BS0tx[i]);  
+   
+ }
+  
+}
+
+void Print_RxBS_Buffer(void) {
+   uint32_t i;
+   printf("\r\n");  
+  // generated bit stream
+  
+ for (i = 0; i < SAMPLES_NUMBER; i++) {
+   
+   printf("   BS0 [%02d] = %02d\r\n" , i, mb.BS0rx[i]);  
+   
+ }
+  
+}
+
+
 static void Sin_Config(void)
 {
 // Signal input

@@ -6,42 +6,58 @@
 #include "capture.h"
 
 
-#define BSIZE 1    // keep at 1
+#define BSIZE 1             // keep at 1
 #define SAMPLES_NUMBER 8    // numbers of signal samples of bitstream 
 #define ND SAMPLES_NUMBER*4 // numbers of acquisitions
 
 
 
 struct _MAILBOX  {
-    int32_t BS0[BSIZE];
-    int32_t BS1[BSIZE];
-    int32_t BS2[BSIZE];
-    int32_t BS3[BSIZE];
-    int32_t BS4[BSIZE];
-    /*
-    int32_t D0[4];
-    int32_t D1[4];
-    int32_t D2[4];
-    int32_t D3[4];
-    int32_t Fsync[4];
-    */
+  // Bit stream output from DSP modulator virtual msense 203
+    int8_t BS0[BSIZE];
+    int8_t BS1[BSIZE];
+    int8_t BS2[BSIZE];
+    int8_t BS3[BSIZE];
+    int8_t BS4[BSIZE];
     
-    /** PIO receive buffer. */
+  // Rx input of bitstream to be post-processed by the DSP block
+    int8_t BS0rx[SAMPLES_NUMBER];
+    int8_t BS1rx[SAMPLES_NUMBER];
+    int8_t BS2rx[SAMPLES_NUMBER];
+    int8_t BS3rx[SAMPLES_NUMBER];
+    int8_t BS4rx[SAMPLES_NUMBER];
+    
+  // generated bit stream
+    int8_t BS0tx[SAMPLES_NUMBER];
+    int8_t BS1tx[SAMPLES_NUMBER];
+    int8_t BS2tx[SAMPLES_NUMBER];
+    int8_t BS3tx[SAMPLES_NUMBER];
+    int8_t BS4tx[SAMPLES_NUMBER];
+    
+    
+    
+    uint8_t to_demux[4];
+    int8_t demux_to_bs[5];
+    
+    /** PIO receive buffer. up to 16384 values*/
     uint32_t A[SAMPLES_NUMBER];
     uint32_t B[SAMPLES_NUMBER];
     uint32_t C[SAMPLES_NUMBER];
+  
     
-    uint32_t idx;     // buffer size counter
+    //main loop and DMA control
+    uint32_t idx;     // DSP decimation counter
     bool dmacall;     // dma interupt and callback done
     bool repeat;      // enable the signal generation
-    uint32_t count;   // nb of samples = count*BSIZE
+    uint32_t count;   // nb of samples counter
     
+    // State machine
     bool dsp_compute;   // start DSP computation
     bool buffer_full;   // Bits stream buffer full
     bool buffer_print;  // allow to print bs on uart
     uint8_t next_state; // truth output table {0,1,2,3.. ,31} 
     
-  } ;
+  };
 
 #define PIN_D1     {PIO_PA6,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
 #define PIN_D0     {PIO_PD30, PIOD, ID_PIOD, PIO_OUTPUT_0, PIO_DEFAULT}

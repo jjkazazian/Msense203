@@ -31,7 +31,6 @@
 
 extern int main (void)  
 {
-
         Main_Config();
         Clock_Config();        
         Sense_Config();
@@ -39,9 +38,8 @@ extern int main (void)
         Init_state();
         Capture_Config(PIOA);
         Enable_Capture();  
-        
          
-        //Sense_Dump_param(); 
+        //Sense_Dump_param(); // SPI com and read registers
          mb.dmacall =  true;
        
   while (1) {
@@ -50,17 +48,17 @@ extern int main (void)
         
         PIO_Capture_DMA();
         
-        mb.count = 0;
+        mb.count = 0; // Numbers of samples counting
         mb.dmacall = true;
         mb.repeat  = true;
-        
-        
+
 	while (mb.repeat) { // PIO signal generation
                        DSP();
+                       Copy_BS_to_Buffer(mb.count);
                        BS_2_IO(); 
                        mb.count++;
                     
-         //Next_action();     // next action to do  
+         // Next_action();     // State Machine next action to do  
          
              if (mb.count*BSIZE == SAMPLES_NUMBER) {
                mb.repeat = false;
@@ -68,14 +66,21 @@ extern int main (void)
              }
         }
            
-        while(mb.dmacall);
+        while(mb.dmacall); // wait for end of DMA callback
         
       
-       PIO_Copy_Buffer(mb.A, mb.B);
+       //PIO_Copy_Buffer(mb.A, mb.B);
        
-       PIO_Print_Buffer(mb.A);
-
-       PIO_Clear_Buffer(mb.B); 
+       //PIO_Print_Buffer(mb.A);
+       //PIO_Print_Buffer(mb.B);
+       PIO_Print_Buffer(mb.C);
+       
+       Print_TxBS_Buffer(); 
+       PIO_Unpack_Buffer(mb.C);
+       Print_RxBS_Buffer(); 
+      
+       
+       PIO_Clear_Buffer(mb.C); 
        PIO_Clear_Buffer(mb.A);
   }
 }

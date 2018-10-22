@@ -148,7 +148,7 @@ void Main_Config(void)
 
        /* Enable I and D cache */
 	SCB_EnableICache();
-	SCB_EnableDCache();
+	//SCB_EnableDCache(); // if activated: need static cluster optimization 
         
 	/* Disable watchdog */
 	WDT_Disable(WDT);
