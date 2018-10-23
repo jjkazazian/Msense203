@@ -90,6 +90,7 @@ void IO_clear(uint32_t pinnb);
 void Print_int8_to_bin(uint8_t k);
 void waitKey(void);
 void Main_Config(void);
+void Print_byte(char *a, uint8_t b);
 
 
 

@@ -35,9 +35,17 @@ static unsigned int_to_int(unsigned k) {
 
 void Print_int8_to_bin(uint8_t k)
 { // 8 bits only
-  printf(" Code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
+  
+  printf("Code= %08d", (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_int(k / 2))));
 }
 
+void Print_byte(char *a, uint8_t b)
+{ 
+printf(" %s ",a); 
+Print_int8_to_bin(b); 
+printf("\r\n");
+
+}
 
 void Init_state(void) {
 mb.dsp_compute    = false;

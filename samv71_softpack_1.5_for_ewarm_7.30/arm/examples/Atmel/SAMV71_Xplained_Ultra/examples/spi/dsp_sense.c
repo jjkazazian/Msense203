@@ -53,7 +53,7 @@ static uint32_t nsinus;   // sinus buffer counter
 static bool flag_osr;
 //int32_t sinus[BSBUFFER];        // Input buffer for min 50Hz sinus
 //int32_t Dout[BSBUFFER/8];       // Output buffer
-//uint32_t idx;                 // buffer index
+//uint32_t idx;                   // buffer index
 
 /*----------------------------------------------------------------------------
  *        module functions
@@ -62,11 +62,11 @@ static bool flag_osr;
 void Copy_BS_to_Buffer(uint32_t index) {
   
     // generated bit stream
-    mb.BS0tx[index]=mb.BS0[0];
-    mb.BS1tx[index]=mb.BS0[1];
-    mb.BS2tx[index]=mb.BS0[2];
-    mb.BS3tx[index]=mb.BS0[3];
-    mb.BS4tx[index]=mb.BS0[4];
+    mb.BS0tx[index]= mb.BS0[0];
+    mb.BS1tx[index]= mb.BS1[0];
+    mb.BS2tx[index]= mb.BS2[0];
+    mb.BS3tx[index]= mb.BS3[0];
+    mb.BS4tx[index]= mb.BS4[0];
   
 }
 
@@ -77,7 +77,7 @@ void Print_TxBS_Buffer(void) {
   
  for (i = 0; i < SAMPLES_NUMBER; i++) {
    
-   printf("   BS0 [%02d] = %02d\r\n" , i, mb.BS0tx[i]);  
+   printf("TX BS0 [%02d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0tx[i], mb.BS1tx[i], mb.BS2tx[i], mb.BS3tx[i], mb.BS4tx[i] );  
    
  }
   
@@ -90,7 +90,7 @@ void Print_RxBS_Buffer(void) {
   
  for (i = 0; i < SAMPLES_NUMBER; i++) {
    
-   printf("   BS0 [%02d] = %02d\r\n" , i, mb.BS0rx[i]);  
+   printf("RX BS0 [%02d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0rx[i], mb.BS1rx[i], mb.BS2rx[i], mb.BS3rx[i], mb.BS4rx[i] );  
    
  }
   
@@ -217,10 +217,10 @@ static void Decimation(void)  {
                         flag_osr = false;
 
                         if (mb.idx == BSIZE-1) {
-                                                mb.buffer_full =  true;
-                                                for (i = 0; i < BSIZE; i++) printf ("  %d \r\n", cic0.xout);
-                                                mb.buffer_full=false;  
-                                                mb.idx=0;    
+                               mb.buffer_full =  true;
+                               for (i = 0; i < BSIZE; i++) printf ("  %d \r\n", cic0.xout);
+                               mb.buffer_full=false;  
+                               mb.idx=0;    
                         } else mb.idx++;
                          
           }
@@ -253,13 +253,15 @@ nsinus = 0;
 
 void DSP(void)
 {
-
+         int32_t sin;
+         
           if (nsinus == N-1) nsinus=0; else nsinus++;
-          mod0.xin = Sinus(nsinus,1);
-          mod1.xin = mod0.xin;
-          mod2.xin = mod0.xin;
-          mod3.xin = mod0.xin;
-          mod4.xin = mod0.xin;
+          sin = Sinus(nsinus,1);
+          mod0.xin = sin;
+          mod1.xin = 0;
+          mod2.xin = sin;
+          mod3.xin = 0;
+          mod4.xin = sin;
        
           Modulator(&mod0);
           Modulator(&mod1);
@@ -267,13 +269,13 @@ void DSP(void)
           Modulator(&mod3);
           Modulator(&mod4);
           
-           
+           /*
            Combfilter(&mod0,&cic0);   
            Combfilter(&mod1,&cic1);    
            Combfilter(&mod2,&cic2);   
-           Combfilter(&mod2,&cic2);   
-           Combfilter(&mod2,&cic2);   
-          
+           Combfilter(&mod3,&cic3);   
+           Combfilter(&mod4,&cic4);   
+          */
            
           // Decimation();
           

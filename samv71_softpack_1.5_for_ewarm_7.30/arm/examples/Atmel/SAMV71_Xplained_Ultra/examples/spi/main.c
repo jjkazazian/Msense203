@@ -69,14 +69,13 @@ extern int main (void)
         while(mb.dmacall); // wait for end of DMA callback
         
       
-       //PIO_Copy_Buffer(mb.A, mb.B);
+       PIO_Copy_Buffer(mb.A, mb.B);
        
-       //PIO_Print_Buffer(mb.A);
-       //PIO_Print_Buffer(mb.B);
        PIO_Print_Buffer(mb.C);
+       PIO_Print_Buffer(mb.B);
        
        Print_TxBS_Buffer(); 
-       PIO_Unpack_Buffer(mb.C);
+       PIO_Unpack_Buffer(mb.B);
        Print_RxBS_Buffer(); 
       
        

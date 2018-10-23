@@ -151,6 +151,7 @@ void PIO_Unpack_Buffer(uint32_t *in) {
               
               if (dmx_full) {
               //printf("   D0= %02d   D1= %02d   D2= %02d   D3= %02d   \n\r" ,dmx[0],dmx[1],dmx[2],dmx[3]);
+              
               mb.to_demux[0] = dmx[0];
               mb.to_demux[1] = dmx[1];
               mb.to_demux[2] = dmx[2];
@@ -164,7 +165,7 @@ void PIO_Unpack_Buffer(uint32_t *in) {
               mb.BS3rx[i] = mb.demux_to_bs[3];
               mb.BS4rx[i] = mb.demux_to_bs[4];
               
-              printf("   B0  [%02d]  = %02d   B1= %02d   B2= %02d   B3= %02d    B4= %02d \n\r" ,i,mb.BS0rx[i],mb.BS1rx[i],mb.BS2rx[i],mb.BS3rx[i],mb.BS4rx[i]);
+             // printf("   B0  [%02d]  = %02d   B1= %02d   B2= %02d   B3= %02d    B4= %02d \n\r" ,i,mb.BS0rx[i],mb.BS1rx[i],mb.BS2rx[i],mb.BS3rx[i],mb.BS4rx[i]);
               dmx_full = false;
               } else { // padding with zeros
               mb.BS0rx[i] = 0;
