@@ -18,7 +18,7 @@
 /*----------------------------------------------------------------------------
  *        Local definitions
  *----------------------------------------------------------------------------*/
-  struct _MAILBOX mb;
+  struct _MAILBOX mb @  0x20420000;
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -54,7 +54,7 @@ extern int main (void)
 
 	while (mb.repeat) { // PIO signal generation
                        DSP();
-                       Copy_BS_to_Buffer(mb.count);
+                       //Copy_BS_to_Buffer(mb.count); //buffer C to check tx values
                        BS_2_IO(); 
                        mb.count++;
                     
@@ -71,11 +71,12 @@ extern int main (void)
       
        PIO_Copy_Buffer(mb.A, mb.B);
        
-       PIO_Print_Buffer(mb.C);
-       PIO_Print_Buffer(mb.B);
+       //PIO_Print_Buffer(mb.C);
+       //PIO_Print_Buffer(mb.B);
        
-       Print_TxBS_Buffer(); 
+       //Print_TxBS_Buffer(); 
        PIO_Unpack_Buffer(mb.B);
+       printf("    Unpack done");
        Print_RxBS_Buffer(); 
       
        

@@ -220,12 +220,12 @@ struct _DEMUX demx;
                 IO_ctrl(3,mx.D3[i]);
                 IO_ctrl(4,mx.Fsync[i]);
                 IO_clear(5); // Clock capture
-                Wait(1);
+                //Wait(1);
                 for (j = 0; j < 100; j++) __asm("nop");
                 IO_set(5);  // Clock capture on rise
                 //Wait(1);            // try and remove
                 //PIO_Capture();      // try and remove
-                Wait(1);
+                //Wait(1);
                 for (j = 0; j < 100; j++) __asm("nop");
                 IO_clear(5);
                 IO_ctrl(4,0);

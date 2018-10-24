@@ -7,7 +7,7 @@
 
 
 #define BSIZE 1             // keep at 1
-#define SAMPLES_NUMBER 8    // numbers of signal samples of bitstream 
+#define SAMPLES_NUMBER 8192    // numbers of signal samples of bitstream 
 #define ND SAMPLES_NUMBER*4 // numbers of acquisitions
 
 

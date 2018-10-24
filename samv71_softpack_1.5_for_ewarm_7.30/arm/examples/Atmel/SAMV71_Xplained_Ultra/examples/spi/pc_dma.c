@@ -10,6 +10,7 @@
 
 /*  DMA driver instance */
 static uint32_t pcDmaRxChannel;
+static bool dma_initialized =true;
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -54,8 +55,17 @@ static uint8_t _PcConfigureDmaChannels(PcDma *pPc)
 {
 
 	/* Driver initialize */
-	XDMAD_Initialize(pPc->pXdmad, 0);
+  if (dma_initialized) {
+    XDMAD_Initialize(pPc->pXdmad, 0);
+    
+    dma_initialized = false;
+  } else {
+        pPc->pXdmad->pXdmacs = XDMAC;
+	pPc->pXdmad->pollingMode = 0;
+	pPc->pXdmad->numControllers = XDMAC_CONTROLLER_NUM;
+	pPc->pXdmad->numChannels    = (XDMAC_GTYPE_NB_CH(XDMAC_GetType(XDMAC)) + 1);
 
+  }
 	XDMAD_FreeChannel(pPc->pXdmad, pcDmaRxChannel);
 
 	/* Allocate a DMA channel for PIOA RX. */
