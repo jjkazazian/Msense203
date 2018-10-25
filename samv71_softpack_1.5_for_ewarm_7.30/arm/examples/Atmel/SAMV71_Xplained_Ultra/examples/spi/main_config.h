@@ -5,22 +5,34 @@
 #include "mux.h"
 #include "capture.h"
 
+#define MIN(a,b) (((a)<(b))?(a):(b)) // minus   = MIN(mean, minus);
+#define MAX(a,b) (((a)>(b))?(a):(b)) // maximus = MAX(mean, maximus); 
 
-#define BSIZE 1             // keep at 1
-#define SAMPLES_NUMBER 8192    // numbers of signal samples of bitstream 
-#define ND SAMPLES_NUMBER*4 // numbers of acquisitions
+#define CICOSR   64 // Comb filter decimation factor
 
+#define SAMPLES_NUMBER 180*CICOSR    // numbers of signal samples of bitstream 
+#define ND SAMPLES_NUMBER*4    // numbers of acquisitions
 
+#define ASTACK 0x20400018  // stack base address
+#define SSTACK 0x2000      // stack size
 
 struct _MAILBOX  {
   // Bit stream output from DSP modulator virtual msense 203
-    int8_t BS0[BSIZE];
-    int8_t BS1[BSIZE];
-    int8_t BS2[BSIZE];
-    int8_t BS3[BSIZE];
-    int8_t BS4[BSIZE];
+    int8_t BS0;
+    int8_t BS1;
+    int8_t BS2;
+    int8_t BS3;
+    int8_t BS4;
+    
+    int32_t CIC0;
+    int32_t CIC1;
+    int32_t CIC2;
+    int32_t CIC3;
+    int32_t CIC4;
     
   // Rx input of bitstream to be post-processed by the DSP block
+    //int32_t CIC0rx[SAMPLES_NUMBER/CICOSR];
+    /*
     int8_t BS0rx[SAMPLES_NUMBER];
     int8_t BS1rx[SAMPLES_NUMBER];
     int8_t BS2rx[SAMPLES_NUMBER];
@@ -33,16 +45,16 @@ struct _MAILBOX  {
     int8_t BS2tx[SAMPLES_NUMBER];
     int8_t BS3tx[SAMPLES_NUMBER];
     int8_t BS4tx[SAMPLES_NUMBER];
-    
+    */
     
     
     uint8_t to_demux[4];
     int8_t demux_to_bs[5];
     
-    /** PIO receive buffer. up to 16384 values*/
+    /** DMA PIO receive buffer. up to 8192*4 values*/
     uint32_t A[SAMPLES_NUMBER];
     uint32_t B[SAMPLES_NUMBER];
-    uint32_t C[SAMPLES_NUMBER];
+    //uint32_t C[SAMPLES_NUMBER];
   
     
     //main loop and DMA control
@@ -52,6 +64,7 @@ struct _MAILBOX  {
     uint32_t count;   // nb of samples counter
     
     // State machine
+    bool cic_ready[5];   // start DSP computation
     bool dsp_compute;   // start DSP computation
     bool buffer_full;   // Bits stream buffer full
     bool buffer_print;  // allow to print bs on uart

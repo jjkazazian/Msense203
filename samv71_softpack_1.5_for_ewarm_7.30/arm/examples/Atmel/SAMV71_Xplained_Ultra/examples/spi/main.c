@@ -18,12 +18,16 @@
 /*----------------------------------------------------------------------------
  *        Local definitions
  *----------------------------------------------------------------------------*/
-  struct _MAILBOX mb @  0x20420000;
+// see main_config.h  
+ struct _MAILBOX mb @  0x20420000;
+
+
+
 
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
-
+// See main_config.c
 
 /*----------------------------------------------------------------------------
  *        Exported functions
@@ -31,6 +35,15 @@
 
 extern int main (void)  
 {
+  
+          uint32_t *pDest;
+
+                //fill Stack with 0xDEADFACE Pattern 
+       for (pDest = (uint32_t *)ASTACK; pDest < (uint32_t *)(ASTACK+SSTACK);) 
+       {
+              *pDest++ = 0xDEADFACE;
+       }
+  
         Main_Config();
         Clock_Config();        
         Sense_Config();
@@ -41,7 +54,7 @@ extern int main (void)
          
         //Sense_Dump_param(); // SPI com and read registers
          mb.dmacall =  true;
-       
+            
   while (1) {
              
         waitKey();
@@ -60,7 +73,7 @@ extern int main (void)
                     
          // Next_action();     // State Machine next action to do  
          
-             if (mb.count*BSIZE == SAMPLES_NUMBER) {
+             if (mb.count == SAMPLES_NUMBER) {
                mb.repeat = false;
                break;
              }
@@ -74,14 +87,14 @@ extern int main (void)
        //PIO_Print_Buffer(mb.C);
        //PIO_Print_Buffer(mb.B);
        
-       //Print_TxBS_Buffer(); 
+       //Print_TxBS_Buffer(); //C buffer
        PIO_Unpack_Buffer(mb.B);
        printf("    Unpack done");
-       Print_RxBS_Buffer(); 
+       //Print_RxBS_Buffer();  // A buffer
       
        
-       PIO_Clear_Buffer(mb.C); 
-       PIO_Clear_Buffer(mb.A);
+       //PIO_Clear_Buffer(mb.C); 
+       //PIO_Clear_Buffer(mb.A);
   }
 }
 /** \endcond */

@@ -20,78 +20,13 @@ struct _DEMUX demx;
  *        module functions
  *----------------------------------------------------------------------------*/
 
-  static void Load_BS(void) {
-    mx.sd0  = (int8_t)mb.BS0[0];
-    mx.sdI1 = (int8_t)mb.BS1[0];
-    mx.sdV1 = (int8_t)mb.BS2[0];
-    mx.sdI2 = (int8_t)mb.BS3[0];
-    mx.sdV2 = (int8_t)mb.BS4[0];   
-        }
-  
-     
-        
-  static  void bs_2_bin(struct _MUX * mux) {
-      mux->SD0[0] = mux->sd0 & B0_msk;  
-      mux->SD0[1] = mux->sd0 & B1_msk;  
-      mux->SD0[2] = mux->sd0 & B2_msk; 
-      
-      mux->SDI1[0] = mux->sdI1 & B0_msk;  
-      mux->SDI1[1] = mux->sdI1 & B1_msk;  
-      mux->SDI1[2] = mux->sdI1 & B2_msk; 
-      
-      mux->SDV1[0] = mux->sdV1 & B0_msk;  
-      mux->SDV1[1] = mux->sdV1 & B1_msk;  
-      mux->SDV1[2] = mux->sdV1 & B2_msk;      
-      
-      mux->SDI2[0] = mux->sdI2 & B0_msk;  
-      mux->SDI2[1] = mux->sdI2 & B1_msk;  
-      mux->SDI2[2] = mux->sdI2 & B2_msk; 
-      
-      mux->SDV2[0] = mux->sdV2 & B0_msk;  
-      mux->SDV2[1] = mux->sdV2 & B1_msk;  
-      mux->SDV2[2] = mux->sdV2 & B2_msk; 
-      
-    }
  
- 
-  static void Load_DMX(void) {
-    demx.D0 = (uint8_t)mb.to_demux[0];
-    demx.D1 = (uint8_t)mb.to_demux[1];
-    demx.D2 = (uint8_t)mb.to_demux[2];
-    demx.D3 = (uint8_t)mb.to_demux[3];
-    
-   // Print_byte("D2", mb.to_demux[2]);
-   // Print_byte("D3", mb.to_demux[3]);
-        }  
-  
-  static  void dmx_2_bin(struct _DEMUX * demx) {
-      demx->BD0[0] = demx->D0 & B0_msk;  
-      demx->BD0[1] = demx->D0 & B1_msk;  
-      demx->BD0[2] = demx->D0 & B2_msk; 
-      demx->BD0[3] = demx->D0 & B3_msk; 
-      
-      demx->BD1[0] = demx->D1 & B0_msk;  
-      demx->BD1[1] = demx->D1 & B1_msk;  
-      demx->BD1[2] = demx->D1 & B2_msk; 
-      demx->BD1[3] = demx->D1 & B3_msk; 
-      
-      demx->BD2[0] = demx->D2 & B0_msk;  
-      demx->BD2[1] = demx->D2 & B1_msk;  
-      demx->BD2[2] = demx->D2 & B2_msk;      
-      demx->BD2[3] = demx->D2 & B3_msk; 
-      
-      demx->BD3[0] = demx->D3 & B0_msk;  
-      demx->BD3[1] = demx->D3 & B1_msk;  
-      demx->BD3[2] = demx->D3 & B2_msk; 
-      demx->BD3[3] = demx->D3 & B3_msk;
-    }
   static void mxcode(void) {
     // D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity      
     // D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)
     // D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)      
     // D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)
-     // Load_BS();
-     // bs_2_bin(&mx);
+
     // bits attribution, Change on posedge
     // Sigma delta order MSB to LSB
     // BS4,  BS3,  BS2,  BS1,  BS0    
@@ -102,25 +37,25 @@ struct _DEMUX demx;
         //  0 = 000
         // -1 = 111
         // -2 = 110
-      mx.D3[0] = mb.BS1[0] & B0_msk;
-      mx.D3[1] = mb.BS2[0] & B1_msk; //
-      mx.D3[2] = mb.BS3[0] & B2_msk;  
+      mx.D3[0] = mb.BS1 & B0_msk;
+      mx.D3[1] = mb.BS2 & B1_msk; //
+      mx.D3[2] = mb.BS3 & B2_msk;  
       mx.D3[3] = false; 
       //mx.D3[0] = mx.SDI1[0];  mx.D3[1] = mx.SDV1[1]; mx.D3[2] = mx.SDI2[2]; mx.D3[3] = false; 
-      mx.D2[0] = mb.BS0[0] & B2_msk; 
-      mx.D2[1] = mb.BS2[0] & B0_msk; //
-      mx.D2[2] = mb.BS3[0] & B1_msk;  
-      mx.D2[3] = mb.BS4[0] & B2_msk; 
+      mx.D2[0] = mb.BS0 & B2_msk; 
+      mx.D2[1] = mb.BS2 & B0_msk; //
+      mx.D2[2] = mb.BS3 & B1_msk;  
+      mx.D2[3] = mb.BS4 & B2_msk; 
       //mx.D2[0] = mx.SD0[2]; mx.D2[1] = mx.SDV1[0]; mx.D2[2] = mx.SDI2[1]; mx.D2[3] = mx.SDV2[2];
-      mx.D1[0] = mb.BS0[0] & B1_msk;  
-      mx.D1[1] = mb.BS1[0] & B2_msk; 
-      mx.D1[2] = mb.BS3[0] & B0_msk;  
-      mx.D1[3] = mb.BS4[0] & B1_msk;  
+      mx.D1[0] = mb.BS0 & B1_msk;  
+      mx.D1[1] = mb.BS1 & B2_msk; 
+      mx.D1[2] = mb.BS3 & B0_msk;  
+      mx.D1[3] = mb.BS4 & B1_msk;  
       //mx.D1[0] = mx.SD0[1]; mx.D1[1] = mx.SDI1[2]; mx.D1[2] = mx.SDI2[0]; mx.D1[3] = mx.SDV2[1]; 
-      mx.D0[0] = mb.BS0[0] & B0_msk;
-      mx.D0[1] = mb.BS1[0] & B1_msk;
-      mx.D0[2] = mb.BS2[0] & B2_msk; //
-      mx.D0[3] = mb.BS4[0] & B0_msk;  
+      mx.D0[0] = mb.BS0 & B0_msk;
+      mx.D0[1] = mb.BS1 & B1_msk;
+      mx.D0[2] = mb.BS2 & B2_msk; //
+      mx.D0[3] = mb.BS4 & B0_msk;  
       //mx.D0[0] = mx.SD0[0];  mx.D0[1] = mx.SDI1[1]; mx.D0[2] = mx.SDV1[2]; mx.D0[3] = mx.SDV2[0];
       mx.Fsync[0] = false;   
       mx.Fsync[1] = false;   
@@ -129,7 +64,7 @@ struct _DEMUX demx;
   
     } 
  
-  static  uint8_t decodeBS(bool *code ) {
+  static  int8_t decodeBS(bool *code ) {
     //  2 = 010
     //  1 = 001
     //  0 = 000
@@ -149,50 +84,32 @@ struct _DEMUX demx;
    }
   
    void demxcode(void) {
-     // Load_DMX();
-    //  dmx_2_bin(&demx);
       
     //SD0 bit stream BS0   
-  //demx.SD0[0]=  demx.BD0[0]; 
-    demx.SD0[0]= mb.to_demux[0] & B0_msk;
-  //demx.SD0[1]=  demx.BD1[0]; 
-    demx.SD0[1]= mb.to_demux[0] & B1_msk;
-  //demx.SD0[2]=  demx.BD2[0];
-    demx.SD0[2]= mb.to_demux[0] & B2_msk;
-      
-      
+      demx.SD0[0]= mb.to_demux[0] & B0_msk;
+      demx.SD0[1]= mb.to_demux[0] & B1_msk;
+      demx.SD0[2]= mb.to_demux[0] & B2_msk;
       
     //SDI1  bit stream BS1   
-    //demx.SDI1[0]= demx.BD3[0]; 
       demx.SDI1[0]=  mb.to_demux[0] & B3_msk;
-    //demx.SDI1[1]= demx.BD0[1];  
       demx.SDI1[1]=  mb.to_demux[1] & B0_msk; 
-    //demx.SDI1[2]= demx.BD1[1];  
       demx.SDI1[2]=  mb.to_demux[1] & B1_msk;  
 
     //SDV1  bit stream BS2   
-    //demx.SDV1[0]= demx.BD2[1];  
       demx.SDV1[0]= mb.to_demux[1] & B2_msk;
-    //demx.SDV1[1]= demx.BD3[1];  
-      demx.SDV1[1]= mb.to_demux[1] & B3_msk;
-    //demx.SDV1[2]= demx.BD0[2];   
+      demx.SDV1[1]= mb.to_demux[1] & B3_msk; 
       demx.SDV1[2]= mb.to_demux[2] & B0_msk;      
       
       
     //SDI2  bit stream BS3
-    //demx.SDI2[0]= demx.BD1[2];   
-      demx.SDI2[0]= mb.to_demux[2] & B1_msk;  
-    //demx.SDI2[1]= demx.BD2[2];   
+      demx.SDI2[0]= mb.to_demux[2] & B1_msk;   
       demx.SDI2[1]= mb.to_demux[2] & B2_msk;   
-    //demx.SDI2[2]= demx.BD3[2]; 
       demx.SDI2[2]=  mb.to_demux[2]& B3_msk;   
       
     //SDV2  bit stream BS4
-    //demx.SDV2[0]= demx.BD0[3];
+
       demx.SDV2[0] = mb.to_demux[3] & B0_msk; 
-    //demx.SDV2[1]= demx.BD1[3]; 
       demx.SDV2[1] = mb.to_demux[3] & B1_msk; 
-    //demx.SDV2[2]= demx.BD2[3];
       demx.SDV2[2] = mb.to_demux[3] & B2_msk; 
       
       //mx.BD3[3] = false; 
@@ -221,12 +138,10 @@ struct _DEMUX demx;
                 IO_ctrl(4,mx.Fsync[i]);
                 IO_clear(5); // Clock capture
                 //Wait(1);
-                for (j = 0; j < 100; j++) __asm("nop");
+                for (j = 0; j < 1000; j++) __asm("nop");
                 IO_set(5);  // Clock capture on rise
-                //Wait(1);            // try and remove
-                //PIO_Capture();      // try and remove
                 //Wait(1);
-                for (j = 0; j < 100; j++) __asm("nop");
+                for (j = 0; j < 1000; j++) __asm("nop");
                 IO_clear(5);
                 IO_ctrl(4,0);
 
@@ -234,7 +149,7 @@ struct _DEMUX demx;
                 // printf("d=   %x\r\n",data);
                 // Print_int8_to_bin(data);
                 // printf("\r\n");
-                mb.C[mb.count] |= (uint32_t)data << i*8; 
+                //mb.C[mb.count] |= (uint32_t)data << i*8; //Checker
            
       }
      
@@ -244,13 +159,8 @@ struct _DEMUX demx;
     void BS_2_IO(void ) {
   
       mxcode();
-      //printf(" SD: %d  hex: %x  ----> %d %d %d", mx.sd0, mx.sd0, mx.SD0[2],mx.SD0[1],mx.SD0[0]); 
-      //or// Print_int8_to_bin(mx.sd0);
-      //printf( "\r\n");
-      
       Drive_IO();
  
-      
     }
     
 

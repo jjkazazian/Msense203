@@ -7,7 +7,7 @@
 #include "main_config.h"
 #include "capture.h"
 #include "pc_dma.h"
-
+#include "dsp_sense.h"
 /*----------------------------------------------------------------------------
  *        Local variables
  *----------------------------------------------------------------------------*/
@@ -15,7 +15,7 @@ extern struct _MAILBOX mb;
 
 
 // to remove later when DMA works
-bool pio_rx_buffer_error[ND];
+//bool pio_rx_buffer_error[ND];
 uint32_t count;
 
 
@@ -60,43 +60,11 @@ void _pc_dmaTransfer(void)
         Pc_ConfigureDma(&Pc ,PIOA ,ID_PIOA, &dmad);
 	Pc_SendData(&Pc, &PcCommand);
 }
-/**
- * \brief Read from Capture Reception Holding Register.
- * \note Data presence should be tested before any read attempt.
- *
- * \param p_pio Pointer to a PIO instance.
- * \param pul_data Pointer to store the data.
- *
- * \retval 0 Success.
- * \retval 1 I/O Failure, Capture data is not ready.
- */
-static uint32_t pio_capture_read(const Pio *p_pio, uint32_t *pul_data)
-{/*
-	// Check if the data is ready 
-	if ((p_pio->PIO_PCISR & PIO_PCISR_DRDY)== 0) {
-		return 1;
-	}
-*/
-	/* Read data */
-	*pul_data = p_pio->PIO_PCRHR;
-	return p_pio->PIO_PCISR & PIO_PCISR_DRDY; //clear the status
-}
 
-
-static void PIO_Capture_Buffer(const Pio *p_pio)
-{
-      uint32_t data;
-
-      pio_rx_buffer_error[count] = pio_capture_read(p_pio, &data); 
-     
-      mb.A[count] = data & 0x1F; 
-      if (count > ND) count=0; else count++;
-    
-}
 
 void PIO_Copy_Buffer(uint32_t *in, uint32_t *out ) {
       uint32_t i;
-       for (i = 0; i < ND; i++) {
+       for (i = 0; i < SAMPLES_NUMBER; i++) {
               out[i] = in[i];   
        }
 }
@@ -119,7 +87,7 @@ void PIO_Print_Buffer(uint32_t *in) {
 
 void PIO_Unpack_Buffer(uint32_t *in) {
       uint32_t i, j, k;
-      uint32_t n = 0; // count the frame start after sync
+      uint32_t n = 0;     // count the frame start after sync
       uint32_t csum = 0;  //Check sum
       uint8_t data;
       uint8_t sync;
@@ -133,12 +101,9 @@ void PIO_Unpack_Buffer(uint32_t *in) {
    
               data = (uint8_t)((in[i] >> 8*j) & 0x1F);  // byte data extraction from 32 bits
               sync = (uint8_t)((data  >> 4)   & 0x1);   // synchro bit extraction
-              
-              
+                        
               csum = csum + sync;
-              
-              //if (!synchronized && sync==1) synchronized=true;
-              
+
               if (synchronized) {
               dmx[n] = (uint8_t)(data & 0xF);
               n++;
@@ -158,21 +123,27 @@ void PIO_Unpack_Buffer(uint32_t *in) {
               mb.to_demux[3] = dmx[3];
               
               demxcode();
-
+              
+      
+                if (CIC_0(mb.demux_to_bs[0])) printf(" %d \n\r" ,mb.CIC0); 
+/*
               mb.BS0rx[i] = mb.demux_to_bs[0];
               mb.BS1rx[i] = mb.demux_to_bs[1];
               mb.BS2rx[i] = mb.demux_to_bs[2];
               mb.BS3rx[i] = mb.demux_to_bs[3];
               mb.BS4rx[i] = mb.demux_to_bs[4];
+            */  
+              
+              
               
              // printf("   B0  [%02d]  = %02d   B1= %02d   B2= %02d   B3= %02d    B4= %02d \n\r" ,i,mb.BS0rx[i],mb.BS1rx[i],mb.BS2rx[i],mb.BS3rx[i],mb.BS4rx[i]);
               dmx_full = false;
               } else { // padding with zeros
-              mb.BS0rx[i] = 0;
-              mb.BS1rx[i] = 0;
-              mb.BS2rx[i] = 0;
-              mb.BS3rx[i] = 0;
-              mb.BS4rx[i] = 0;
+             // mb.BS0rx[i] = 0;
+             // mb.BS1rx[i] = 0;
+             // mb.BS2rx[i] = 0;
+             // mb.BS3rx[i] = 0;
+             // mb.BS4rx[i] = 0;
                 
                 
               }
@@ -187,15 +158,13 @@ void PIO_Unpack_Buffer(uint32_t *in) {
 
 void PIO_Clear_Buffer(uint32_t *in) {
       uint32_t i;
-       for (i = 0; i < ND; i++) {
+       for (i = 0; i < SAMPLES_NUMBER; i++) {
          in[i] = 0;
        }
 }
 
 
 void PIO_Capture_DMA(void) {
-  //PIO_Capture_Buffer(PIOA);
-  
     /* initialize PIO DMA mode*/ 
     _pc_dmaTransfer();
  

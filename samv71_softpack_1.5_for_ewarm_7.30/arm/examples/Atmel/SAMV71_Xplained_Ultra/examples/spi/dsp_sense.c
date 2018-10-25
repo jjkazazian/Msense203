@@ -50,7 +50,7 @@ static struct _CIC cic4;
 
 extern struct _MAILBOX mb;
 static uint32_t nsinus;   // sinus buffer counter  
-static bool flag_osr;
+
 //int32_t sinus[BSBUFFER];        // Input buffer for min 50Hz sinus
 //int32_t Dout[BSBUFFER/8];       // Output buffer
 //uint32_t idx;                   // buffer index
@@ -60,14 +60,14 @@ static bool flag_osr;
  *----------------------------------------------------------------------------*/
 
 void Copy_BS_to_Buffer(uint32_t index) {
-  
+  /*
     // generated bit stream
     mb.BS0tx[index]= mb.BS0[0];
     mb.BS1tx[index]= mb.BS1[0];
     mb.BS2tx[index]= mb.BS2[0];
     mb.BS3tx[index]= mb.BS3[0];
     mb.BS4tx[index]= mb.BS4[0];
-  
+  */
 }
 
 void Print_TxBS_Buffer(void) {
@@ -77,7 +77,7 @@ void Print_TxBS_Buffer(void) {
   
  for (i = 0; i < SAMPLES_NUMBER; i++) {
    
-   printf("TX BS0 [%02d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0tx[i], mb.BS1tx[i], mb.BS2tx[i], mb.BS3tx[i], mb.BS4tx[i] );  
+  // printf("TX BS0 [%04d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0tx[i], mb.BS1tx[i], mb.BS2tx[i], mb.BS3tx[i], mb.BS4tx[i] );  
    
  }
   
@@ -90,7 +90,7 @@ void Print_RxBS_Buffer(void) {
   
  for (i = 0; i < SAMPLES_NUMBER; i++) {
    
-   printf("RX BS0 [%02d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0rx[i], mb.BS1rx[i], mb.BS2rx[i], mb.BS3rx[i], mb.BS4rx[i] );  
+ //  printf("RX BS0 [%04d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0rx[i], mb.BS1rx[i], mb.BS2rx[i], mb.BS3rx[i], mb.BS4rx[i] );  
    
  }
   
@@ -182,7 +182,7 @@ static void Modulator(struct _MOD * mod)
   mod->z    = mod->xin;
 }
 
-static void Combfilter(struct _MOD * mod, struct _CIC * cic) 
+static int32_t Combfilter(struct _MOD * mod, struct _CIC * cic) 
 {
   cic->osr++;
   
@@ -195,7 +195,7 @@ cic->int1 = cic->int1 + mod->bs;
     if (cic->osr == CICOSR) { // decimator
                       
               cic->osr=0;
-              flag_osr = true;
+              cic->flag_osr = true;
               
               // derivator
               cic->der1    = cic->int3;
@@ -207,38 +207,43 @@ cic->int1 = cic->int1 + mod->bs;
               cic->zder2   = cic->der2;
               cic->zder3   = cic->der3;   
 
-              cic->xout = CICScal_sirag*cic->xout;     
+              cic->xout = CICScal_sirag*cic->xout; 
+              return cic->xout;
     }   
 }
 
-static void Decimation(void)  {
- uint32_t i; 
-         if (flag_osr){
-                        flag_osr = false;
 
-                        if (mb.idx == BSIZE-1) {
-                               mb.buffer_full =  true;
-                               for (i = 0; i < BSIZE; i++) printf ("  %d \r\n", cic0.xout);
-                               mb.buffer_full=false;  
-                               mb.idx=0;    
-                        } else mb.idx++;
-                         
-          }
+static bool Decimate(struct _CIC *cic)  {
+
+         if (cic->flag_osr){
+                        cic->flag_osr = false;
+       
+              mb.CIC0 = cic->xout;
+              return true;
+          } else return false;
 }
+
 
 static void BS2mb(void)  {
 
-          mb.BS0[mb.idx] = mod0.bs;
-          mb.BS1[mb.idx] = mod1.bs;
-          mb.BS2[mb.idx] = mod2.bs;
-          mb.BS3[mb.idx] = mod3.bs;
-          mb.BS4[mb.idx] = mod4.bs;
+          mb.BS0 = mod0.bs;
+          mb.BS1 = mod1.bs;
+          mb.BS2 = mod2.bs;
+          mb.BS3 = mod3.bs;
+          mb.BS4 = mod4.bs;
           
-          if (mb.idx == BSIZE-1) {
-                                  mb.buffer_full =  true;
-                                  mb.idx=0;    
-          } else mb.idx++;
+          mb.buffer_full =  true;
     }
+
+
+bool CIC_0(int8_t bs) {
+  struct _MOD mod;
+  mod.bs=bs;
+  Combfilter(&mod,&cic0);
+  return Decimate(&cic0);
+  
+ 
+}  
 
 
 void DSP_Config(void) 
@@ -246,7 +251,11 @@ void DSP_Config(void)
 Sin_Config();
 Mod_Config();
 CIC_Config();
-flag_osr    = false;
+cic0.flag_osr    = false;
+cic1.flag_osr    = false;
+cic2.flag_osr    = false;
+cic3.flag_osr    = false;
+cic4.flag_osr    = false;
 mb.idx = 0;
 nsinus = 0;
 }
@@ -267,17 +276,7 @@ void DSP(void)
           Modulator(&mod1);
           Modulator(&mod2);
           Modulator(&mod3);
-          Modulator(&mod4);
-          
-           /*
-           Combfilter(&mod0,&cic0);   
-           Combfilter(&mod1,&cic1);    
-           Combfilter(&mod2,&cic2);   
-           Combfilter(&mod3,&cic3);   
-           Combfilter(&mod4,&cic4);   
-          */
-           
-          // Decimation();
+          Modulator(&mod4);   
           
           BS2mb();
           

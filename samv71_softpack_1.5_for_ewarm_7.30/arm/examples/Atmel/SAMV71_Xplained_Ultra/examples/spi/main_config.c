@@ -40,6 +40,7 @@ void Print_int8_to_bin(uint8_t k)
 }
 
 void Print_byte(char *a, uint8_t b)
+//Syntax is Print_byte("toto", value);
 { 
 printf(" %s ",a); 
 Print_int8_to_bin(b); 
