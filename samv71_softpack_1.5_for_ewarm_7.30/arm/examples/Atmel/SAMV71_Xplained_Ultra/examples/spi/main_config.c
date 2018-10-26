@@ -10,7 +10,7 @@
  *        Local definitions
  *----------------------------------------------------------------------------*/
 static uint32_t dbg_baudrate = 115200;
-extern struct _MAILBOX mb; 
+extern MAILBOX *mb; 
 
 //Pin for muxout
 extern const Pin mux_pins[]       = PINS_MUXout;
@@ -49,18 +49,18 @@ printf("\r\n");
 }
 
 void Init_state(void) {
-mb.dsp_compute    = false;
-mb.buffer_print   = false;
-mb.buffer_full    = false;
+mb->dsp_compute    = false;
+mb->buffer_print   = false;
+mb->buffer_full    = false;
 }
 
 uint32_t Truth_table(void) {
   int i; 
   uint8_t val[8] = {0,1,2,3,4,5,0,0}; 
-  i  =  (int)mb.dsp_compute *4+
-        (int)mb.buffer_print*2+
-        (int)mb.buffer_full *1;
- mb.next_state = val[i];
+  i  =  (int)mb->dsp_compute *4+
+        (int)mb->buffer_print*2+
+        (int)mb->buffer_full *1;
+ mb->next_state = val[i];
  return i;
  /*
 dsp_compute	
@@ -86,9 +86,9 @@ void Next_action(void) {
 
   //printf("  %d %d %d  state: %d next: %d  \r\n", mb.dsp_compute, mb.buffer_print, mb.buffer_full, state, mb.next_state);
   
-  switch (mb.next_state) {
+  switch (mb->next_state) {
 		case 0: //  reset all bool to init value
-                       mb.dsp_compute = true;
+                       mb->dsp_compute = true;
 		break;               
 		case 1:  // do nothing
                         Init_state();
@@ -98,9 +98,9 @@ void Next_action(void) {
                   
                        //DSP();
                        BS_2_IO(); 
-                       mb.count++;
+                       mb->count++;
                        
-                       mb.buffer_print = false;
+                       mb->buffer_print = false;
 		break;            
                 case 3: // do nothing      
                        Init_state();
@@ -108,14 +108,14 @@ void Next_action(void) {
                 case 4: // dsp next step computation
                        
                        DSP();
-                       mb.buffer_full =  true;
+                       mb->buffer_full =  true;
                       
                        
                 break;
                 case 5: // stop dsp
-                       mb.dsp_compute = false;
-                       mb.buffer_print = true;
-                       mb.buffer_full  = false;
+                       mb->dsp_compute = false;
+                       mb->buffer_print = true;
+                       mb->buffer_full  = false;
                 break;
                 case 6: // do nothing
                        Init_state(); 
@@ -152,6 +152,36 @@ void IO_clear(uint32_t pinnb)
  PIO_Clear(&mux_pins[pinnb]);      
 }
 
+void Memory_Config(MAILBOX *pmb){
+ /* 384kbyte   = 96000 words of 32 bits
+    sizeof(mb) = 23056 Words
+   29 600 bytes of readonly  code memory
+    4 160 bytes of readonly  data memory
+  116 584 bytes of readwrite data memory
+  
+  */
+  
+  uint32_t mb_size;
+  uint32_t limit;
+  uint32_t *pDestmb;
+  
+  mb_size = sizeof(MAILBOX);
+  
+ 
+                    //fill mb with 0xDEADFACE Pattern 
+       for (pDestmb = (uint32_t *)pmb; pDestmb < (uint32_t *)(sizeof(MAILBOX));) 
+       {
+              *pDestmb++ = 0xDEADFACE;
+       } 
+  
+  printf("\r\n   (bytes) Mailbox size    = %d   , DMA(A+B) buffer = %d   \r\n", mb_size, 2*SAMPLES_NUMBER*4 );
+ 
+ 
+  printf("   Mailbox address = %x \r\n", pmb);
+  printf("\r\n");
+  
+}
+
 void Main_Config(void)
 {
 
@@ -180,7 +210,9 @@ void Main_Config(void)
         PIOA->PIO_PPDER |= PIO_PPDER_P9;
         PIOA->PIO_PPDER |= PIO_PPDER_P10;
         
-        mb.count=0;
+        Memory_Config(mb);
+        mb->count=0;
+        
         
 }
 /** \endcond */

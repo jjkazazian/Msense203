@@ -19,10 +19,9 @@
  *        Local definitions
  *----------------------------------------------------------------------------*/
 // see main_config.h  
- struct _MAILBOX mb @  0x20420000;
-
-
-
+ //struct _MAILBOX mb;// @ 0x20420000;
+   
+MAILBOX *mb;
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -36,13 +35,21 @@
 extern int main (void)  
 {
   
+  //get ASTACK in memory map
           uint32_t *pDest;
+         
 
-                //fill Stack with 0xDEADFACE Pattern 
+                //fill Stack with 0xFEEDFACE Pattern 
        for (pDest = (uint32_t *)ASTACK; pDest < (uint32_t *)(ASTACK+SSTACK);) 
        {
-              *pDest++ = 0xDEADFACE;
+              *pDest++ = 0xFEEDFACE;
        }
+  
+  mb = (MAILBOX *)malloc( sizeof(MAILBOX)); 
+  
+    
+ 
+  
   
         Main_Config();
         Clock_Config();        
@@ -51,44 +58,52 @@ extern int main (void)
         Init_state();
         Capture_Config(PIOA);
         Enable_Capture();  
+        
+    
          
         //Sense_Dump_param(); // SPI com and read registers
-         mb.dmacall =  true;
+         mb->dmacall =  true;
             
   while (1) {
              
         waitKey();
         
-        PIO_Capture_DMA();
+        Memory_Config(mb);
+        waitKey();
         
-        mb.count = 0; // Numbers of samples counting
-        mb.dmacall = true;
-        mb.repeat  = true;
+        PIO_Capture_DMA();
+        printf("    DMA restart\r\n");
+        
+        mb->count = 0; // counting of sample Numbers 
+        mb->dmacall = true;
+        mb->repeat  = true;
 
-	while (mb.repeat) { // PIO signal generation
+        printf("    boolean reset %d \r\n",mb->count );
+	while (mb->repeat) { // PIO signal generation
                        DSP();
                        //Copy_BS_to_Buffer(mb.count); //buffer C to check tx values
                        BS_2_IO(); 
-                       mb.count++;
+                       mb->count++;
+                       // printf("  %d \r\n", mb->count);
                     
          // Next_action();     // State Machine next action to do  
          
-             if (mb.count == SAMPLES_NUMBER) {
-               mb.repeat = false;
+             if (mb->count == SAMPLES_NUMBER) {
+               mb->repeat = false;
                break;
              }
         }
            
-        while(mb.dmacall); // wait for end of DMA callback
+        while(mb->dmacall); // wait for end of DMA callback
         
       
-       PIO_Copy_Buffer(mb.A, mb.B);
+       PIO_Copy_Buffer(mb->A, mb->B);
        
        //PIO_Print_Buffer(mb.C);
        //PIO_Print_Buffer(mb.B);
        
        //Print_TxBS_Buffer(); //C buffer
-       PIO_Unpack_Buffer(mb.B);
+       PIO_Unpack_Buffer(mb->B);
        printf("    Unpack done");
        //Print_RxBS_Buffer();  // A buffer
       

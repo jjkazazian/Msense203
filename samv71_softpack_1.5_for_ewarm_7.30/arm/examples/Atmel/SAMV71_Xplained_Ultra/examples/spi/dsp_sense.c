@@ -48,7 +48,7 @@ static struct _CIC cic3;
 static struct _CIC cic4;
 
 
-extern struct _MAILBOX mb;
+extern MAILBOX *mb;
 static uint32_t nsinus;   // sinus buffer counter  
 
 //int32_t sinus[BSBUFFER];        // Input buffer for min 50Hz sinus
@@ -218,7 +218,7 @@ static bool Decimate(struct _CIC *cic)  {
          if (cic->flag_osr){
                         cic->flag_osr = false;
        
-              mb.CIC0 = cic->xout;
+              mb->CIC0 = cic->xout;
               return true;
           } else return false;
 }
@@ -226,13 +226,13 @@ static bool Decimate(struct _CIC *cic)  {
 
 static void BS2mb(void)  {
 
-          mb.BS0 = mod0.bs;
-          mb.BS1 = mod1.bs;
-          mb.BS2 = mod2.bs;
-          mb.BS3 = mod3.bs;
-          mb.BS4 = mod4.bs;
+          mb->BS0 = mod0.bs;
+          mb->BS1 = mod1.bs;
+          mb->BS2 = mod2.bs;
+          mb->BS3 = mod3.bs;
+          mb->BS4 = mod4.bs;
           
-          mb.buffer_full =  true;
+          mb->buffer_full =  true;
     }
 
 
@@ -256,7 +256,7 @@ cic1.flag_osr    = false;
 cic2.flag_osr    = false;
 cic3.flag_osr    = false;
 cic4.flag_osr    = false;
-mb.idx = 0;
+mb->idx = 0;
 nsinus = 0;
 }
 

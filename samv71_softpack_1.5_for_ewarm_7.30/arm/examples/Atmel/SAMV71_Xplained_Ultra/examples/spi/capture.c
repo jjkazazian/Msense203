@@ -11,7 +11,7 @@
 /*----------------------------------------------------------------------------
  *        Local variables
  *----------------------------------------------------------------------------*/
-extern struct _MAILBOX mb;    
+extern MAILBOX *mb;    
 
 
 // to remove later when DMA works
@@ -47,7 +47,7 @@ static void _pc_Callback(int dummy, void* pArg)
 	dummy = dummy;
 	pArg = pArg;
 	//Processing the DMA buffer //////////////////////////////////////
-        mb.dmacall =  false;
+        mb->dmacall =  false;
         
 	}
 
@@ -55,7 +55,7 @@ static void _pc_Callback(int dummy, void* pArg)
 void _pc_dmaTransfer(void)
 {       
         PcCommand.RxSize   = ND;     
-	PcCommand.pRxBuff  = mb.A;
+	PcCommand.pRxBuff  = mb->A;
 	PcCommand.callback = (PcCallback)_pc_Callback;
         Pc_ConfigureDma(&Pc ,PIOA ,ID_PIOA, &dmad);
 	Pc_SendData(&Pc, &PcCommand);
@@ -85,7 +85,7 @@ void PIO_Print_Buffer(uint32_t *in) {
        }
 }
 
-void PIO_Unpack_Buffer(uint32_t *in) {
+void PIO_Unpack_Buffer( uint32_t *in) {
       uint32_t i, j, k;
       uint32_t n = 0;     // count the frame start after sync
       uint32_t csum = 0;  //Check sum
@@ -117,15 +117,15 @@ void PIO_Unpack_Buffer(uint32_t *in) {
               if (dmx_full) {
               //printf("   D0= %02d   D1= %02d   D2= %02d   D3= %02d   \n\r" ,dmx[0],dmx[1],dmx[2],dmx[3]);
               
-              mb.to_demux[0] = dmx[0];
-              mb.to_demux[1] = dmx[1];
-              mb.to_demux[2] = dmx[2];
-              mb.to_demux[3] = dmx[3];
+              mb->to_demux[0] = dmx[0];
+              mb->to_demux[1] = dmx[1];
+              mb->to_demux[2] = dmx[2];
+              mb->to_demux[3] = dmx[3];
               
               demxcode();
               
       
-                if (CIC_0(mb.demux_to_bs[0])) printf(" %d \n\r" ,mb.CIC0); 
+                if (CIC_0(mb->demux_to_bs[0])) printf(" %d \n\r" ,mb->CIC0); 
 /*
               mb.BS0rx[i] = mb.demux_to_bs[0];
               mb.BS1rx[i] = mb.demux_to_bs[1];

@@ -9,26 +9,28 @@
 #define MAX(a,b) (((a)>(b))?(a):(b)) // maximus = MAX(mean, maximus); 
 
 #define CICOSR   64 // Comb filter decimation factor
-
-#define SAMPLES_NUMBER 180*CICOSR    // numbers of signal samples of bitstream 
+#define CIC_NUMBER 255
+#define SAMPLES_NUMBER CIC_NUMBER*CICOSR    // numbers of signal samples of bitstream 
 #define ND SAMPLES_NUMBER*4    // numbers of acquisitions
 
 #define ASTACK 0x20400018  // stack base address
 #define SSTACK 0x2000      // stack size
 
-struct _MAILBOX  {
+
+COMPILER_PACK_SET(4)
+typedef struct   {
   // Bit stream output from DSP modulator virtual msense 203
-    int8_t BS0;
-    int8_t BS1;
-    int8_t BS2;
-    int8_t BS3;
-    int8_t BS4;
+    volatile int8_t BS0;
+    volatile int8_t BS1;
+    volatile int8_t BS2;
+    volatile int8_t BS3;
+    volatile int8_t BS4;
     
-    int32_t CIC0;
-    int32_t CIC1;
-    int32_t CIC2;
-    int32_t CIC3;
-    int32_t CIC4;
+    volatile int32_t CIC0;
+    volatile int32_t CIC1;
+    volatile int32_t CIC2;
+    volatile int32_t CIC3;
+    volatile int32_t CIC4;
     
   // Rx input of bitstream to be post-processed by the DSP block
     //int32_t CIC0rx[SAMPLES_NUMBER/CICOSR];
@@ -48,12 +50,12 @@ struct _MAILBOX  {
     */
     
     
-    uint8_t to_demux[4];
-    int8_t demux_to_bs[5];
+    volatile uint8_t to_demux[4];
+    volatile int8_t demux_to_bs[5];
     
-    /** DMA PIO receive buffer. up to 8192*4 values*/
-    uint32_t A[SAMPLES_NUMBER];
-    uint32_t B[SAMPLES_NUMBER];
+    /** DMA PIO receive buffer. up to 8192 values, cannot be volatile*/
+     uint32_t A[SAMPLES_NUMBER]; 
+     uint32_t B[SAMPLES_NUMBER];
     //uint32_t C[SAMPLES_NUMBER];
   
     
@@ -70,7 +72,12 @@ struct _MAILBOX  {
     bool buffer_print;  // allow to print bs on uart
     uint8_t next_state; // truth output table {0,1,2,3.. ,31} 
     
-  };
+  }  MAILBOX;
+
+COMPILER_PACK_RESET()
+
+
+
 
 #define PIN_D1     {PIO_PA6,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
 #define PIN_D0     {PIO_PD30, PIOD, ID_PIOD, PIO_OUTPUT_0, PIO_DEFAULT}
@@ -104,7 +111,7 @@ void Print_int8_to_bin(uint8_t k);
 void waitKey(void);
 void Main_Config(void);
 void Print_byte(char *a, uint8_t b);
-
+void Memory_Config(MAILBOX *pmb);
 
 
 #endif /* ! _MAIN_CONFIG_H */
