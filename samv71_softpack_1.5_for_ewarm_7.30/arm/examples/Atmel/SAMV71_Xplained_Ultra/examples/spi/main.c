@@ -22,35 +22,57 @@
  //struct _MAILBOX mb;// @ 0x20420000;
    
 MAILBOX *mb;
+uint32_t doit;
 
 /*----------------------------------------------------------------------------
  *        Local functions
  *----------------------------------------------------------------------------*/
 // See main_config.c
 
+
+static void PIO_Generation(void) {
+  
+         mb->repeat  = true;
+
+        
+	while (mb->repeat) { 
+          // PIO signal generation
+                       DSP();
+                       //Copy_BS_to_Buffer(mb.count); //buffer C to check tx values
+                       BS_2_IO(); 
+                       mb->count++;
+                 
+                    
+         // Next_action();     // State Machine next action to do  
+         
+             if ( mb->count == SAMPLES_NUMBER) {
+               mb->repeat = false;
+               break;
+             }
+        }
+  
+  
+}
+
 /*----------------------------------------------------------------------------
  *        Exported functions
  *----------------------------------------------------------------------------*/
 
-extern int main (void)  
+ extern int main (void)  
 {
-  
-  //get ASTACK in memory map
           uint32_t *pDest;
+          uint32_t buff_nb_count = 0;
+          bool mainloop_repeat = true;
          
 
-                //fill Stack with 0xFEEDFACE Pattern 
+       // fill Stack with 0xFEEDFACE Pattern 
        for (pDest = (uint32_t *)ASTACK; pDest < (uint32_t *)(ASTACK+SSTACK);) 
        {
               *pDest++ = 0xFEEDFACE;
        }
-  
-  mb = (MAILBOX *)malloc( sizeof(MAILBOX)); 
-  
-    
  
-  
-  
+  mb = (MAILBOX *)malloc( sizeof(MAILBOX)); 
+
         Main_Config();
         Clock_Config();        
         Sense_Config();
@@ -58,61 +80,75 @@ extern int main (void)
         Init_state();
         Capture_Config(PIOA);
         Enable_Capture();  
-        
-    
-         
+ 
         //Sense_Dump_param(); // SPI com and read registers
-         mb->dmacall =  true;
-            
-  while (1) {
-             
-        waitKey();
-        
-        Memory_Config(mb);
-        waitKey();
-        
-        PIO_Capture_DMA();
-        printf("    DMA restart\r\n");
-        
+         mb->dmacall   =  true;
+         mb->dmaswitch = false;
+         
+         waitKey(); 
+         
+        // Fill the first buffer 
+        PIO_Capture_DMA( mb->dmaswitch);
+        PIO_Generation();
+         
+
+    
+doitagain:
+  mainloop_repeat = true;
+
+         
+  while (mainloop_repeat) {
+        buff_nb_count++;    
+
         mb->count = 0; // counting of sample Numbers 
         mb->dmacall = true;
         mb->repeat  = true;
 
-        printf("    boolean reset %d \r\n",mb->count );
-	while (mb->repeat) { // PIO signal generation
-                       DSP();
-                       //Copy_BS_to_Buffer(mb.count); //buffer C to check tx values
-                       BS_2_IO(); 
-                       mb->count++;
-                       // printf("  %d \r\n", mb->count);
-                    
-         // Next_action();     // State Machine next action to do  
-         
-             if (mb->count == SAMPLES_NUMBER) {
+        
+	while (mb->repeat) { 
+          // PIO signal generation
+             DSP();
+             BS_2_IO();
+             
+             if (mb->dmaswitch) Capture_Unpack(mb->A); 
+             else Capture_Unpack(mb->B);     
+             
+             mb->count++;
+
+             if ( mb->count == SAMPLES_NUMBER) {
                mb->repeat = false;
-               break;
              }
         }
-           
-        while(mb->dmacall); // wait for end of DMA callback
-        
-      
-       PIO_Copy_Buffer(mb->A, mb->B);
-       
-       //PIO_Print_Buffer(mb.C);
-       //PIO_Print_Buffer(mb.B);
-       
-       //Print_TxBS_Buffer(); //C buffer
-       PIO_Unpack_Buffer(mb->B);
-       printf("    Unpack done");
-       //Print_RxBS_Buffer();  // A buffer
-      
-       
-       //PIO_Clear_Buffer(mb.C); 
-       //PIO_Clear_Buffer(mb.A);
+        // wait for end of DMA callback, next buffer available   
+        while(mb->dmacall); 
+  
+         if ( buff_nb_count == BUFFER_NUMBER) {
+              mainloop_repeat = false;
+              buff_nb_count = 0;  
+         }
+  
   }
+
+        if (doit == 0) { 
+                  printf("\r\n   End of Program \r\n"); 
+                  while (1); 
+        } else doit++;
+  
+  goto doitagain;
+  
+  printf("    End of Program \r\n");
+  while (1);
 }
 /** \endcond */
+
+       //PIO_Print_Buffer(mb.B);
+       //Print_TxBS_Buffer(); //C buffer
+       //Print_RxBS_Buffer();  // A buffer
+       //PIO_Clear_Buffer(mb.C); 
+       //PIO_Clear_Buffer(mb.A);
+       // printf("    Start unpack \r\n");
+       // PIO_Unpack_Buffer(mb->A);
+       // printf("    Unpack done \r\n");
 /* ---------------------------------------------------------------------------- */
 /*                  Microchip Microcontroller Software Support                  */
 /*                       SAM Software Package License                           */

@@ -12,7 +12,8 @@
 
 float pi=3.1415926535897932384626433832795028841971693993751058209749445; // Pi
 
-
+ uint32_t ii;
+ 
 // Signal input
 static uint32_t n;       // 16 bits signed signal full scale
 static uint32_t FS;      // +/- dynamic = +/-FS/2
@@ -134,8 +135,15 @@ static void CIC_Config(void)
 CICBout  = CICORDER*(int)(log((double)CICOSR)/log(2));    // CIC ouput number of bit
 CICScal_sirag = (int)pow(2,NS-(NBS+CICBout-1)); // CIC output applied scaling at 24 bits
 //printf ("CICScal_sirag  %d \r\n", CICScal_sirag );
-
+cic0.id = 0;
+cic1.id = 1;
+cic2.id = 2;
+cic3.id = 3;
+cic4.id = 4;
 }
+
+
+
 
 void Sinus_Gen(void) 
 {// not used anymore
@@ -150,12 +158,16 @@ void Sinus_Gen(void)
 
 }
 
-static int32_t Sinus(uint32_t index, uint32_t nb) 
+
+
+static int32_t Sinus(uint32_t index) 
 {
-  float s;  
-  s = amp*sin(index*T*2*pi*fain/M+2*pi/nb);
-  //s = amp*arm_sin_f32(index*T*2*pi*fain/M+2*pi/nb);
-  return (int)round(s);
+  double s;
+  
+  s = randone()+8*amp*sin((double)(index*T*2*pi*fain/M));
+
+  //s= randone();
+  return (int)round(s/8);
 }
 
 
@@ -182,7 +194,7 @@ static void Modulator(struct _MOD * mod)
   mod->z    = mod->xin;
 }
 
-static int32_t Combfilter(struct _MOD * mod, struct _CIC * cic) 
+static int32_t Combfilter(int32_t bs, struct _CIC * cic) 
 {
   cic->osr++;
   
@@ -190,7 +202,7 @@ static int32_t Combfilter(struct _MOD * mod, struct _CIC * cic)
 
 cic->int3 = cic->int3 + cic->int2;
 cic->int2 = cic->int2 + cic->int1;
-cic->int1 = cic->int1 + mod->bs;
+cic->int1 = cic->int1 + bs;
 
     if (cic->osr == CICOSR) { // decimator
                       
@@ -216,9 +228,19 @@ cic->int1 = cic->int1 + mod->bs;
 static bool Decimate(struct _CIC *cic)  {
 
          if (cic->flag_osr){
-                        cic->flag_osr = false;
-       
-              mb->CIC0 = cic->xout;
+              cic->flag_osr = false;
+              switch (cic->id) {
+              case 0:
+                mb->CIC0 = cic->xout;
+              case 1:  
+                mb->CIC1 = cic->xout;
+              case 2:  
+                mb->CIC2 = cic->xout;
+              case 3:  
+                mb->CIC3 = cic->xout;
+              case 4:  
+                mb->CIC4 = cic->xout;
+              }
               return true;
           } else return false;
 }
@@ -236,14 +258,27 @@ static void BS2mb(void)  {
     }
 
 
-bool CIC_0(int8_t bs) {
-  struct _MOD mod;
-  mod.bs=bs;
-  Combfilter(&mod,&cic0);
-  return Decimate(&cic0);
-  
- 
+bool CIC(uint32_t id, int32_t bs) {
+
+                switch (id) {
+              case 0:
+                  Combfilter(bs,&cic0);
+                  return Decimate(&cic0);
+              case 1:  
+                  Combfilter(bs,&cic1);
+                  return Decimate(&cic1);
+              case 2:  
+                  Combfilter(bs,&cic2);
+                  return Decimate(&cic2);
+              case 3:  
+                  Combfilter(bs,&cic3);
+                  return Decimate(&cic3);
+              case 4:  
+                  Combfilter(bs,&cic4);
+                  return Decimate(&cic4);
+              }
 }  
+
 
 
 void DSP_Config(void) 
@@ -263,9 +298,12 @@ nsinus = 0;
 void DSP(void)
 {
          int32_t sin;
+        
          
+          sin = Sinus(nsinus);
+
           if (nsinus == N-1) nsinus=0; else nsinus++;
-          sin = Sinus(nsinus,1);
+          
           mod0.xin = sin;
           mod1.xin = 0;
           mod2.xin = sin;
@@ -279,6 +317,15 @@ void DSP(void)
           Modulator(&mod4);   
           
           BS2mb();
+  /*         // Check 
+          if (ii < N*16){
+            ii++;
+            //printf(" %d \n\r" , mod2.bs);
+           if (CIC(2, mod2.bs)) { printf(" %d \n\r" ,mb->CIC2); } 
+          }
+          
+    */      
+          
           
   }
 

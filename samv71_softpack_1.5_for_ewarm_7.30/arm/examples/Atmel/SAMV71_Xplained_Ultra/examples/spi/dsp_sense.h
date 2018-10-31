@@ -22,6 +22,7 @@ struct _MOD  {
   } __attribute__((packed)) ;
 
 struct _CIC  {
+    uint32_t id;                // id of the structure 0 for bs0, 1 for bs1, ...  
     int32_t  xout;              // output signal
     uint32_t osr;               // osr counter
     int32_t int1;               // Integrator 1 memory
@@ -45,7 +46,7 @@ void DSP(void);
 void Copy_BS_to_Buffer(uint32_t index);
 void Print_TxBS_Buffer(void); 
 void Print_RxBS_Buffer(void); 
-bool CIC_0(int8_t bs); 
+bool CIC(uint32_t id, int32_t bs); 
 
 
 #endif /* ! _DSP_SENSE_H */

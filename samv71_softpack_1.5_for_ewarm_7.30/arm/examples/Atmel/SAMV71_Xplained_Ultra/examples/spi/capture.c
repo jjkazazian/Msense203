@@ -13,10 +13,7 @@
  *----------------------------------------------------------------------------*/
 extern MAILBOX *mb;    
 
-
-// to remove later when DMA works
-//bool pio_rx_buffer_error[ND];
-uint32_t count;
+struct _UNPACK up;
 
 
 // DMA
@@ -47,15 +44,18 @@ static void _pc_Callback(int dummy, void* pArg)
 	dummy = dummy;
 	pArg = pArg;
 	//Processing the DMA buffer //////////////////////////////////////
+        //PIO_Copy_Buffer(mb->A, mb->B);
+        PIO_Capture_DMA(mb->dmaswitch);  //0 for A, 1 for B
+        mb->dmaswitch = !mb->dmaswitch;
         mb->dmacall =  false;
         
 	}
 
 /*\brief Configure parallele capture DMA and start DMA transfer.*/
-void _pc_dmaTransfer(void)
+void _pc_dmaTransfer(uint32_t *Pbuffer)
 {       
         PcCommand.RxSize   = ND;     
-	PcCommand.pRxBuff  = mb->A;
+	PcCommand.pRxBuff  = Pbuffer;
 	PcCommand.callback = (PcCallback)_pc_Callback;
         Pc_ConfigureDma(&Pc ,PIOA ,ID_PIOA, &dmad);
 	Pc_SendData(&Pc, &PcCommand);
@@ -85,16 +85,91 @@ void PIO_Print_Buffer(uint32_t *in) {
        }
 }
 
-void PIO_Unpack_Buffer( uint32_t *in) {
+bool Capture_Unpack(uint32_t *in) { 
+//
+  
+  uint32_t j;
+  uint8_t data[4];
+  
+        for (j = 0; j < 4; j++) {
+              data[j] = (uint8_t)((in[up.i] >> 8*j) & 0x1F);  // byte data extraction from 32 bits
+              up.sync = (uint8_t)((data[j]  >> 4)   & 0x1);   // synchro bit extraction
+              up.csum = up.csum + up.sync;  // cumulate sync to count up to sample number 
+              if (up.synchronized && (up.sync == 1) && (up.kase != j)) {up.kase = 4; up.synchronized = false;}// check for synchronization error
+              if (up.sync == 1) {up.kase = j; up.synchronized = true;}   // case detection 0:0001 1:0010 2:0100 3:1000   
+        }
+        
+        switch(up.kase) {
+        // Reorder data to fit the synchronization
+
+                  case 0:
+                  // 0001, case synchrone
+                    mb->to_demux[0] = (data[0] & 0xF);
+                    mb->to_demux[1] = (data[1] & 0xF);
+                    mb->to_demux[2] = (data[2] & 0xF);
+                    mb->to_demux[3] = (data[3] & 0xF);
+                  break;
+
+                 case 1:
+                  // 0010, case one shift left 
+                    mb->to_demux[0] = (data[1] & 0xF);
+                    mb->to_demux[1] = (data[2] & 0xF);
+                    mb->to_demux[2] = (data[3] & 0xF);
+                    mb->to_demux[3] = (up.predata[0] & 0xF);        
+                  break;
+                  
+                 case 2:
+                  // 0100, case one shift left 
+                    mb->to_demux[0] = (data[2] & 0xF);
+                    mb->to_demux[1] = (data[3] & 0xF);
+                    mb->to_demux[2] = (up.predata[0] & 0xF); 
+                    mb->to_demux[3] = (up.predata[1] & 0xF);  
+                  break;
+                  
+                 case 3:
+                  // 1000, case one shift left 
+                    mb->to_demux[0] = (data[3] & 0xF);
+                    mb->to_demux[1] = (up.predata[0] & 0xF); 
+                    mb->to_demux[2] = (up.predata[1] & 0xF); 
+                    mb->to_demux[3] = (up.predata[2] & 0xF);  
+                  break;
+                  
+                 default:
+                  printf("---ERROR Synchro lost \n\r");
+       }
+        
+       demxcode();
+
+       up.predata[0] = data[0];
+       up.predata[1] = data[1];
+       up.predata[2] = data[2];
+       up.predata[3] = data[3];
+       
+       if (CIC(0, mb->demux_to_bs[0])) {       
+         printf(" %d \n\r" ,mb->CIC0);   
+         //mb->CIC2_out[up.k] = mb->CIC2;
+         if (up.k== CIC_NUMBER*BUFFER_NUMBER) up.k=0;  else up.k++;
+       }
+       
+       
+       if (up.i == SAMPLES_NUMBER-1) up.i=0;  else up.i++;
+   
+         
+       return up.status;
+}
+
+
+
+bool PIO_Unpack_Buffer( uint32_t *in) {
       uint32_t i, j, k;
       uint32_t n = 0;     // count the frame start after sync
       uint32_t csum = 0;  //Check sum
       uint8_t data;
-      uint8_t sync;
+      uint8_t sync = 0;
       uint8_t  dmx[4];
       bool synchronized = false;
-      bool dmx_full=false;
-      
+      bool dmx_full     = false;
+      bool status       = false; //no error 
 
        for (i = 0; i < SAMPLES_NUMBER; i++) {
          for (j = 0; j < 4; j++) {
@@ -125,7 +200,7 @@ void PIO_Unpack_Buffer( uint32_t *in) {
               demxcode();
               
       
-                if (CIC_0(mb->demux_to_bs[0])) printf(" %d \n\r" ,mb->CIC0); 
+                if (CIC(0, mb->demux_to_bs[0])) printf(" %d \n\r" ,mb->CIC0); 
 /*
               mb.BS0rx[i] = mb.demux_to_bs[0];
               mb.BS1rx[i] = mb.demux_to_bs[1];
@@ -138,14 +213,14 @@ void PIO_Unpack_Buffer( uint32_t *in) {
               
              // printf("   B0  [%02d]  = %02d   B1= %02d   B2= %02d   B3= %02d    B4= %02d \n\r" ,i,mb.BS0rx[i],mb.BS1rx[i],mb.BS2rx[i],mb.BS3rx[i],mb.BS4rx[i]);
               dmx_full = false;
-              } else { // padding with zeros
+              } else { 
+             // padding with zeros
              // mb.BS0rx[i] = 0;
              // mb.BS1rx[i] = 0;
              // mb.BS2rx[i] = 0;
              // mb.BS3rx[i] = 0;
              // mb.BS4rx[i] = 0;
-                
-                
+
               }
               
                  
@@ -153,7 +228,12 @@ void PIO_Unpack_Buffer( uint32_t *in) {
          }
        }
        printf("\n\r");
-       printf("   Check sum  = %02d \n\r" , csum); 
+       if (csum!=SAMPLES_NUMBER) {
+           printf("   Check sum  = %d   ERROR \n\r" , csum); 
+           status = true;
+       }       
+       else printf("   Check sum Ok = %d \n\r" , csum); 
+       return status;
 }
 
 void PIO_Clear_Buffer(uint32_t *in) {
@@ -164,9 +244,10 @@ void PIO_Clear_Buffer(uint32_t *in) {
 }
 
 
-void PIO_Capture_DMA(void) {
+void PIO_Capture_DMA(bool switch_buffer) {
     /* initialize PIO DMA mode*/ 
-    _pc_dmaTransfer();
+  
+  if (switch_buffer) _pc_dmaTransfer(mb->B); else _pc_dmaTransfer(mb->A);
  
 }
 

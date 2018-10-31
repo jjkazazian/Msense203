@@ -48,6 +48,19 @@ printf("\r\n");
 
 }
 
+double randone(void) 
+{//randf= +/-1
+  double  rdf;  
+  int32_t r1;
+  uint32_t max_rd; 
+  r1 = rand()-rand();
+  max_rd = MAX(max_rd,abs(r1));
+  rdf = (double)r1/(double)max_rd;
+  return rdf;
+}
+
+
+
 void Init_state(void) {
 mb->dsp_compute    = false;
 mb->buffer_print   = false;
@@ -166,18 +179,20 @@ void Memory_Config(MAILBOX *pmb){
   uint32_t *pDestmb;
   
   mb_size = sizeof(MAILBOX);
-  
+  limit = (uint32_t)&pmb + (uint32_t)mb_size;
  
                     //fill mb with 0xDEADFACE Pattern 
-       for (pDestmb = (uint32_t *)pmb; pDestmb < (uint32_t *)(sizeof(MAILBOX));) 
+       for (pDestmb = (uint32_t *)pmb; pDestmb < (uint32_t *)limit; pDestmb++) 
        {
-              *pDestmb++ = 0xDEADFACE;
-       } 
-  
-  printf("\r\n   (bytes) Mailbox size    = %d   , DMA(A+B) buffer = %d   \r\n", mb_size, 2*SAMPLES_NUMBER*4 );
- 
- 
-  printf("   Mailbox address = %x \r\n", pmb);
+       *pDestmb = 0xDEADFACE;
+       }
+  printf("\r\n");
+  printf("        Malloc Mailbox address        = %x   \r\n", pmb);
+  printf("        address limit Mailbox buffer  = %x   \r\n", (uint32_t *)limit); 
+  printf("       (bytes) Malloc Mailbox size    = %d   \r\n", mb_size);
+
+  printf("       (bytes) SAMPLES_NUMBER         = %d   \r\n", SAMPLES_NUMBER); 
+
   printf("\r\n");
   
 }

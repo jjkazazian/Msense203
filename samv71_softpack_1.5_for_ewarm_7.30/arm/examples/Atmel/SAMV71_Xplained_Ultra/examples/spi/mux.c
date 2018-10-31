@@ -145,7 +145,7 @@ struct _DEMUX demx;
                 IO_clear(5);
                 IO_ctrl(4,0);
 
-                data = mx.Fsync[i]*16+mx.D3[i]*8+mx.D2[i]*4+mx.D1[i]*2+mx.D0[i];
+                //data = mx.Fsync[i]*16+mx.D3[i]*8+mx.D2[i]*4+mx.D1[i]*2+mx.D0[i];
                 // printf("d=   %x\r\n",data);
                 // Print_int8_to_bin(data);
                 // printf("\r\n");

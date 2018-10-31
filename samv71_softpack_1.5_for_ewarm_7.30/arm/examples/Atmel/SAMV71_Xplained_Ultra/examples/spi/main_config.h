@@ -8,10 +8,11 @@
 #define MIN(a,b) (((a)<(b))?(a):(b)) // minus   = MIN(mean, minus);
 #define MAX(a,b) (((a)>(b))?(a):(b)) // maximus = MAX(mean, maximus); 
 
-#define CICOSR   64 // Comb filter decimation factor
-#define CIC_NUMBER 255
-#define SAMPLES_NUMBER CIC_NUMBER*CICOSR    // numbers of signal samples of bitstream 
-#define ND SAMPLES_NUMBER*4    // numbers of acquisitions
+#define BUFFER_NUMBER     4                 // numbers of buffers to acquire
+#define CICOSR           64                 // Comb filter decimation factor
+#define CIC_NUMBER       256                // sample number ofter CIC filter
+#define SAMPLES_NUMBER   CIC_NUMBER*CICOSR  // numbers of signal Word samples of bitstream 
+#define ND               SAMPLES_NUMBER*4   // numbers of byte acquisitions for the DMA
 
 #define ASTACK 0x20400018  // stack base address
 #define SSTACK 0x2000      // stack size
@@ -57,6 +58,7 @@ typedef struct   {
      uint32_t A[SAMPLES_NUMBER]; 
      uint32_t B[SAMPLES_NUMBER];
     //uint32_t C[SAMPLES_NUMBER];
+    uint32_t CIC0_out[CIC_NUMBER*BUFFER_NUMBER];
   
     
     //main loop and DMA control
@@ -64,6 +66,7 @@ typedef struct   {
     bool dmacall;     // dma interupt and callback done
     bool repeat;      // enable the signal generation
     uint32_t count;   // nb of samples counter
+    bool dmaswitch;   // DMA switch 0-1 buffer A to buffer B 
     
     // State machine
     bool cic_ready[5];   // start DSP computation
@@ -99,6 +102,7 @@ COMPILER_PACK_RESET()
 /** List of all PIO Capture */
 #define PINS_capture {PIN_CD0, PIN_CD1, PIN_CD2, PIN_CD3, PIN_CD4,   PIN_pclk}
 
+double randone(void) ;
 void Init_state(void);
 uint32_t Truth_table(void);
 void Next_action(void);

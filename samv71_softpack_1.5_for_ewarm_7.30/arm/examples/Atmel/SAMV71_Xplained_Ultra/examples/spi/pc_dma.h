@@ -18,7 +18,7 @@ typedef struct {
 	/** Pointer to the Rx data. */
 	uint32_t *pRxBuff;
 	/** Rx size in bytes. */
-	uint16_t RxSize;
+	uint32_t RxSize;
 	/** Callback function invoked at the end of transfer. */
 	PcCallback callback;
 	/** Callback arguments. */
