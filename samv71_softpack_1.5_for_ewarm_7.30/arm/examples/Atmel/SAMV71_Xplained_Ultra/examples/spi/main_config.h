@@ -8,7 +8,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b)) // minus   = MIN(mean, minus);
 #define MAX(a,b) (((a)>(b))?(a):(b)) // maximus = MAX(mean, maximus); 
 
-#define BUFFER_NUMBER     4                 // numbers of buffers to acquire
+#define BUFFER_NUMBER     2                 // numbers of buffers to acquire
 #define CICOSR           64                 // Comb filter decimation factor
 #define CIC_NUMBER       256                // sample number ofter CIC filter
 #define SAMPLES_NUMBER   CIC_NUMBER*CICOSR  // numbers of signal Word samples of bitstream 
@@ -33,47 +33,30 @@ typedef struct   {
     volatile int32_t CIC3;
     volatile int32_t CIC4;
     
-  // Rx input of bitstream to be post-processed by the DSP block
-    //int32_t CIC0rx[SAMPLES_NUMBER/CICOSR];
-    /*
-    int8_t BS0rx[SAMPLES_NUMBER];
-    int8_t BS1rx[SAMPLES_NUMBER];
-    int8_t BS2rx[SAMPLES_NUMBER];
-    int8_t BS3rx[SAMPLES_NUMBER];
-    int8_t BS4rx[SAMPLES_NUMBER];
-    
-  // generated bit stream
-    int8_t BS0tx[SAMPLES_NUMBER];
-    int8_t BS1tx[SAMPLES_NUMBER];
-    int8_t BS2tx[SAMPLES_NUMBER];
-    int8_t BS3tx[SAMPLES_NUMBER];
-    int8_t BS4tx[SAMPLES_NUMBER];
-    */
-    
-    
     volatile uint8_t to_demux[4];
-    volatile int8_t demux_to_bs[5];
+    volatile int8_t  to_bs[5];
     
     /** DMA PIO receive buffer. up to 8192 values, cannot be volatile*/
      uint32_t A[SAMPLES_NUMBER]; 
      uint32_t B[SAMPLES_NUMBER];
-    //uint32_t C[SAMPLES_NUMBER];
-    uint32_t CIC0_out[CIC_NUMBER*BUFFER_NUMBER];
+  
+     int32_t CIC_C[CIC_NUMBER*BUFFER_NUMBER];
   
     
     //main loop and DMA control
-    uint32_t idx;     // DSP decimation counter
-    bool dmacall;     // dma interupt and callback done
-    bool repeat;      // enable the signal generation
-    uint32_t count;   // nb of samples counter
-    bool dmaswitch;   // DMA switch 0-1 buffer A to buffer B 
+  //  uint32_t idx;     // DSP decimation counter not used
+    bool dmacall;       // dma interupt and callback done
+    bool repeat;        // enable the signal generation
+    uint32_t count;     // nb of samples counter
+    bool dmaswitch;     // DMA switch 0 buffer A to 1 buffer B 
+    uint32_t *Pab;      // pointer to buffer A or B
     
     // State machine
     bool cic_ready[5];   // start DSP computation
-    bool dsp_compute;   // start DSP computation
-    bool buffer_full;   // Bits stream buffer full
-    bool buffer_print;  // allow to print bs on uart
-    uint8_t next_state; // truth output table {0,1,2,3.. ,31} 
+    bool dsp_compute;    // start DSP computation
+    bool buffer_full;    // Bits stream buffer full
+    bool buffer_print;   // allow to print bs on uart
+    uint8_t next_state;  // truth output table {0,1,2,3.. ,31} 
     
   }  MAILBOX;
 

@@ -170,7 +170,7 @@ static void Analog_Config(void)
         Wait(1); 
 }
 
-static void Set_Channel(TEMP)
+static void Set_Channel(uint32_t TEMP)
 {
         Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
   

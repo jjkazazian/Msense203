@@ -25,7 +25,7 @@ static float T;          // Clock period
 static float Tin;        // Sinus period
 
 // CIC
-//static uint32_t CICScale;          // standard scale not used here
+//static uint32_t CICScale;        // standard scale not used here
 static uint32_t CICBout;           // CIC ouput number of bit
 static uint32_t CICScal_sirag;     // CIC output applied scaling at 24 bits
 
@@ -59,43 +59,6 @@ static uint32_t nsinus;   // sinus buffer counter
 /*----------------------------------------------------------------------------
  *        module functions
  *----------------------------------------------------------------------------*/
-
-void Copy_BS_to_Buffer(uint32_t index) {
-  /*
-    // generated bit stream
-    mb.BS0tx[index]= mb.BS0[0];
-    mb.BS1tx[index]= mb.BS1[0];
-    mb.BS2tx[index]= mb.BS2[0];
-    mb.BS3tx[index]= mb.BS3[0];
-    mb.BS4tx[index]= mb.BS4[0];
-  */
-}
-
-void Print_TxBS_Buffer(void) {
-  uint32_t i;
-   
-  // generated bit stream
-  
- for (i = 0; i < SAMPLES_NUMBER; i++) {
-   
-  // printf("TX BS0 [%04d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0tx[i], mb.BS1tx[i], mb.BS2tx[i], mb.BS3tx[i], mb.BS4tx[i] );  
-   
- }
-  
-}
-
-void Print_RxBS_Buffer(void) {
-   uint32_t i;
-   printf("\r\n");  
-  // generated bit stream
-  
- for (i = 0; i < SAMPLES_NUMBER; i++) {
-   
- //  printf("RX BS0 [%04d] = %02d BS1= %02d BS2= %02d BS3= %02d  BS4= %02d\r\n" , i, mb.BS0rx[i], mb.BS1rx[i], mb.BS2rx[i], mb.BS3rx[i], mb.BS4rx[i] );  
-   
- }
-  
-}
 
 
 static void Sin_Config(void)
@@ -142,9 +105,6 @@ cic3.id = 3;
 cic4.id = 4;
 }
 
-
-
-
 void Sinus_Gen(void) 
 {// not used anymore
   uint32_t i; 
@@ -152,8 +112,7 @@ void Sinus_Gen(void)
   
   for (i = 0; i < N; i++) {
   s = amp*sin(i*T*2*pi*fain/M);
-  //sinus[i] = (int)round(s);
- // printf ("  %d \r\n", sinus[i] );
+
   }
 
 }
@@ -166,7 +125,6 @@ static int32_t Sinus(uint32_t index)
   
   s = randone()+8*amp*sin((double)(index*T*2*pi*fain/M));
 
-  //s= randone();
   return (int)round(s/8);
 }
 
@@ -291,7 +249,7 @@ cic1.flag_osr    = false;
 cic2.flag_osr    = false;
 cic3.flag_osr    = false;
 cic4.flag_osr    = false;
-mb->idx = 0;
+//mb->idx = 0; not used
 nsinus = 0;
 }
 
@@ -304,9 +262,9 @@ void DSP(void)
 
           if (nsinus == N-1) nsinus=0; else nsinus++;
           
-          mod0.xin = sin;
+          mod0.xin = 0;
           mod1.xin = 0;
-          mod2.xin = sin;
+          mod2.xin = 0;
           mod3.xin = 0;
           mod4.xin = sin;
        
@@ -317,14 +275,14 @@ void DSP(void)
           Modulator(&mod4);   
           
           BS2mb();
-  /*         // Check 
-          if (ii < N*16){
+           // Check 
+/*          if (ii < 65536){
             ii++;
-            //printf(" %d \n\r" , mod2.bs);
-           if (CIC(2, mod2.bs)) { printf(" %d \n\r" ,mb->CIC2); } 
+            printf(" %d \n\r" , mod0.bs);
+           //if (CIC(2, mod2.bs)) { printf(" %d \n\r" ,mb->CIC2); } 
           }
+*/          
           
-    */      
           
           
   }

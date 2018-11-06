@@ -199,11 +199,18 @@ void Memory_Config(MAILBOX *pmb){
 
 void Main_Config(void)
 {
+  uint32_t *pDest;
+  
+         // fill Stack with 0xFEEDFACE Pattern 
+       for (pDest = (uint32_t *)ASTACK; pDest < (uint32_t *)(ASTACK+SSTACK);) 
+       {
+              *pDest++ = 0xFEEDFACE;
+       }
 
        /* Enable I and D cache */
 	SCB_EnableICache();
 	//SCB_EnableDCache(); // if activated: need static cluster optimization 
-        
+   
 	/* Disable watchdog */
 	WDT_Disable(WDT);
         

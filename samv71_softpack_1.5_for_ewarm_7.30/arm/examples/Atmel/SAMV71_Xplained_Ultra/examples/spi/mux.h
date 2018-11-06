@@ -11,7 +11,7 @@
 #define B3_msk    (0x1u << B3_pos) 
 
 struct _MUX  {
-    int8_t sd0;
+   /* int8_t sd0;
     int8_t sdI1;
     int8_t sdV1;
     int8_t sdI2;
@@ -22,7 +22,7 @@ struct _MUX  {
     bool SDV1[3];
     bool SDI2[3];
     bool SDV2[3];
-    
+    */
     bool D0[4];
     bool D1[4];
     bool D2[4];
@@ -34,19 +34,19 @@ struct _MUX  {
 struct _DEMUX  {
   
     uint32_t synchro_index;  
-    
+    /*
     int8_t sd0;
     int8_t sdI1;
     int8_t sdV1;
     int8_t sdI2;
     int8_t sdV2;
-    
+    */
     bool SD0 [3];
     bool SDI1[3];
     bool SDV1[3];
     bool SDI2[3];
     bool SDV2[3];
-    
+    /*
     bool BD0[4];
     bool BD1[4];
     bool BD2[4];
@@ -56,7 +56,7 @@ struct _DEMUX  {
     uint8_t D1;
     uint8_t D2;
     uint8_t D3;
-
+*/
     
   } __attribute__((packed)) ;
 

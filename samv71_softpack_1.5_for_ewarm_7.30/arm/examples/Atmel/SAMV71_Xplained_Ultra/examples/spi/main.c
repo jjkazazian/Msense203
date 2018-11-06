@@ -23,6 +23,7 @@
    
 MAILBOX *mb;
 uint32_t doit;
+uint32_t k;  
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -30,28 +31,42 @@ uint32_t doit;
 // See main_config.c
 
 
+static void Print_Buffer(uint32_t *buf) {// not working
+  
+  uint32_t j;
+        for (j = 0; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
+        printf(" %d \n\r" ,buf[j]);
+
+        }
+}
+
+
+static void Reset(void) {
+        mb->count = 0;        // counting of sample Numbers 
+        mb->dmacall = true;   // DMA interupt rise when false
+        mb->repeat  = true;   // repeat the io and dma loop
+}
+
 static void PIO_Generation(void) {
   
-         mb->repeat  = true;
-
-        
 	while (mb->repeat) { 
           // PIO signal generation
                        DSP();
                        //Copy_BS_to_Buffer(mb.count); //buffer C to check tx values
                        BS_2_IO(); 
-                       mb->count++;
-                 
-                    
+             
+            // printf(" %d   %x     ", mb->dmaswitch, mb->Pab); 
+            // printf(" %d     ", mb->to_bs[0]);
+            // printf(" %d \n\r" ,mb->BS0);
+           
          // Next_action();     // State Machine next action to do  
          
-             if ( mb->count == SAMPLES_NUMBER) {
-               mb->repeat = false;
-               break;
-             }
+        if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
         }
-  
-  
+        // wait for end of DMA callback, next buffer available   
+        while(mb->dmacall); 
+        mb -> dmaswitch = !mb-> dmaswitch;
+        Reset(); 
 }
 
 /*----------------------------------------------------------------------------
@@ -59,19 +74,11 @@ static void PIO_Generation(void) {
  *----------------------------------------------------------------------------*/
 
  extern int main (void)  
-{
-          uint32_t *pDest;
-          uint32_t buff_nb_count = 0;
-          bool mainloop_repeat = true;
-         
-
-       // fill Stack with 0xFEEDFACE Pattern 
-       for (pDest = (uint32_t *)ASTACK; pDest < (uint32_t *)(ASTACK+SSTACK);) 
-       {
-              *pDest++ = 0xFEEDFACE;
-       }
+{ 
+        uint32_t buff_nb_count = 0;
+        bool mainloop_repeat = true;
  
-  mb = (MAILBOX *)malloc( sizeof(MAILBOX)); 
+        mb = (MAILBOX *)malloc( sizeof(MAILBOX));      
 
         Main_Config();
         Clock_Config();        
@@ -82,55 +89,64 @@ static void PIO_Generation(void) {
         Enable_Capture();  
  
         //Sense_Dump_param(); // SPI com and read registers
-         mb->dmacall   =  true;
          mb->dmaswitch = false;
          
          waitKey(); 
          
         // Fill the first buffer 
-        PIO_Capture_DMA( mb->dmaswitch);
+        if (mb->dmaswitch) mb->Pab = mb->A; else mb->Pab = mb->B;  
+        PIO_Capture_DMA( mb -> dmaswitch);
+        Reset();
         PIO_Generation();
-         
+
 
     
 doitagain:
   mainloop_repeat = true;
-
-         
+  //printf("   START  \n\r");
+  
   while (mainloop_repeat) {
-        buff_nb_count++;    
-
-        mb->count = 0; // counting of sample Numbers 
-        mb->dmacall = true;
-        mb->repeat  = true;
-
+        buff_nb_count++;   
+        //printf("   buff: %d  \n\r", buff_nb_count);
+        PIO_Capture_DMA(mb -> dmaswitch);  // 0 for A, 1 for B
+        if (mb->dmaswitch) mb->Pab = mb->A; else mb->Pab = mb->B; 
         
 	while (mb->repeat) { 
-          // PIO signal generation
+     // PIO signal generation and buffer A or B filling
+             k++;
+             
              DSP();
              BS_2_IO();
+             Unpack(mb->Pab);
              
-             if (mb->dmaswitch) Capture_Unpack(mb->A); 
-             else Capture_Unpack(mb->B);     
+            // printf(" %d   %x     ", mb->dmaswitch, mb->Pab); 
+             //printf(" %d   \n\r  ", mb->to_bs[1]);
+            // printf(" %d \n\r" ,mb->BS0);
              
-             mb->count++;
-
-             if ( mb->count == SAMPLES_NUMBER) {
-               mb->repeat = false;
+             if (CIC(4, mb->to_bs[4])) { 
+              // mb->CIC_C[k] = mb->CIC0;
+               printf(" %d \n\r" ,mb->CIC4);
+               
              }
+             
+             if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
         }
+        
         // wait for end of DMA callback, next buffer available   
         while(mb->dmacall); 
-  
+        Reset();
+        mb -> dmaswitch = !mb-> dmaswitch;
+
          if ( buff_nb_count == BUFFER_NUMBER) {
               mainloop_repeat = false;
-              buff_nb_count = 0;  
+              buff_nb_count = 0; 
+              //printf("   STOP  \n\r");
+              //Print_Buffer(mb->CIC_C);
          }
-  
   }
-
         if (doit == 0) { 
-                  printf("\r\n   End of Program \r\n"); 
+          printf("\r\n   End of Program:  k= %d \r\n", k); 
+          
                   while (1); 
         } else doit++;
   
@@ -140,15 +156,6 @@ doitagain:
   while (1);
 }
 /** \endcond */
-
-       //PIO_Print_Buffer(mb.B);
-       //Print_TxBS_Buffer(); //C buffer
-       //Print_RxBS_Buffer();  // A buffer
-       //PIO_Clear_Buffer(mb.C); 
-       //PIO_Clear_Buffer(mb.A);
-       // printf("    Start unpack \r\n");
-       // PIO_Unpack_Buffer(mb->A);
-       // printf("    Unpack done \r\n");
 /* ---------------------------------------------------------------------------- */
 /*                  Microchip Microcontroller Software Support                  */
 /*                       SAM Software Package License                           */
