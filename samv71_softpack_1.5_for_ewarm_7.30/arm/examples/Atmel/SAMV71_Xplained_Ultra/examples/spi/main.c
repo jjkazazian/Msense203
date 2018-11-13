@@ -1,6 +1,7 @@
 //jj kazazian 2018//
 // Xult board R225 removed
-
+//samv71q21.h
+//#define __DCACHE_PRESENT       0      /**< SAMV71Q21 does provide a Data Cache         */ // jjk set to 0 for debug
 /*----------------------------------------------------------------------------
  *        Headers
  *----------------------------------------------------------------------------*/
@@ -19,11 +20,18 @@
  *        Local definitions
  *----------------------------------------------------------------------------*/
 // see main_config.h  
- //struct _MAILBOX mb;// @ 0x20420000;
-   
-MAILBOX *mb;
+ 
+  
+ MAILBOX *mb = (MAILBOX *)0x20000100;
+ 
+ //  MAILBOX mb @ 0x20000100;
+ 
+
+
 uint32_t doit;
 uint32_t k;  
+
+
 
 /*----------------------------------------------------------------------------
  *        Local functions
@@ -31,12 +39,11 @@ uint32_t k;
 // See main_config.c
 
 
-static void Print_Buffer(uint32_t *buf) {// not working
+static void Print_Buffer(int32_t * buf) {// not working
   
   uint32_t j;
         for (j = 0; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
         printf(" %d \n\r" ,buf[j]);
-
         }
 }
 
@@ -73,13 +80,14 @@ static void PIO_Generation(void) {
  *        Exported functions
  *----------------------------------------------------------------------------*/
 
- extern int main (void)  
+  extern int main (void)  
 { 
         uint32_t buff_nb_count = 0;
         bool mainloop_repeat = true;
+        uint32_t j;
  
-        mb = (MAILBOX *)malloc( sizeof(MAILBOX));      
-
+       // mb = (MAILBOX *)malloc( sizeof(MAILBOX)); changed to TCM     
+        
         Main_Config();
         Clock_Config();        
         Sense_Config();
@@ -90,10 +98,14 @@ static void PIO_Generation(void) {
  
         //Sense_Dump_param(); // SPI com and read registers
          mb->dmaswitch = false;
-         
+         IO_ctrl(6,0);  
          waitKey(); 
+            
+         // IO_ctrl(6,1);  
+         // IO_ctrl(6,0);  
          
         // Fill the first buffer 
+        printf("   START  \n\r");
         if (mb->dmaswitch) mb->Pab = mb->A; else mb->Pab = mb->B;  
         PIO_Capture_DMA( mb -> dmaswitch);
         Reset();
@@ -103,53 +115,67 @@ static void PIO_Generation(void) {
     
 doitagain:
   mainloop_repeat = true;
-  //printf("   START  \n\r");
+
   
   while (mainloop_repeat) {
+
         buff_nb_count++;   
         //printf("   buff: %d  \n\r", buff_nb_count);
         PIO_Capture_DMA(mb -> dmaswitch);  // 0 for A, 1 for B
         if (mb->dmaswitch) mb->Pab = mb->A; else mb->Pab = mb->B; 
-        
+
 	while (mb->repeat) { 
      // PIO signal generation and buffer A or B filling
-             k++;
+           
+          k++;
              
              DSP();
              BS_2_IO();
-             Unpack(mb->Pab);
+             
+                IO_ctrl(6,1);  
+        
+             Unpack_64b_bs0(mb->Pab);
+            
              
             // printf(" %d   %x     ", mb->dmaswitch, mb->Pab); 
-             //printf(" %d   \n\r  ", mb->to_bs[1]);
+            // printf(" %d   \n\r  ", mb->to_bs[1]);
             // printf(" %d \n\r" ,mb->BS0);
-             
-             if (CIC(4, mb->to_bs[4])) { 
-              // mb->CIC_C[k] = mb->CIC0;
-               printf(" %d \n\r" ,mb->CIC4);
-               
+                
+     
+             if (CIC(0, mb->to_bs[0])) { 
+               j=k/CICOSR-1;
+               //mb->CIC_C[j] = mb->CIC0;
+               //printf(" %d, %d \n\r" ,j, mb->CIC_C[j]); 
              }
              
+      
+             
              if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
+               
+             IO_ctrl(6,0);  
         }
-        
+       
         // wait for end of DMA callback, next buffer available   
-        while(mb->dmacall); 
+        while(mb->dmacall);   
         Reset();
         mb -> dmaswitch = !mb-> dmaswitch;
 
          if ( buff_nb_count == BUFFER_NUMBER) {
               mainloop_repeat = false;
               buff_nb_count = 0; 
-              //printf("   STOP  \n\r");
+             // printf("   STOP  \n\r");
               //Print_Buffer(mb->CIC_C);
+   
          }
+         
   }
+   /*
         if (doit == 0) { 
-          printf("\r\n   End of Program:  k= %d \r\n", k); 
+          printf("\r\n   End of Program:  k= %d \r\n", k/CICOSR); 
           
                   while (1); 
         } else doit++;
-  
+*/
   goto doitagain;
   
   printf("    End of Program \r\n");

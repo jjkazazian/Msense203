@@ -13,7 +13,7 @@
 struct _UNPACK  {
       uint32_t i; 
       uint32_t kase;
-
+      uint64_t Lword;
       uint8_t  predata[4];
       uint32_t csum;  // Check sum
       uint8_t  sync;
@@ -26,6 +26,8 @@ struct _UNPACK  {
    
 void Capture_Config(Pio *pio);
 bool Unpack(uint32_t *in);
+void Unpack_bs0(uint32_t *in);
+void Unpack_64b_bs0(uint32_t *in);
 void PIO_Capture_DMA(bool buffer);
 void Enable_Capture(void);
 void Disable_Capture(void);

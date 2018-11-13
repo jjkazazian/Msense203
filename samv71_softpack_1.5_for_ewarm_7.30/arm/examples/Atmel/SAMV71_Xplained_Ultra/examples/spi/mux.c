@@ -61,7 +61,7 @@ struct _DEMUX demx;
   
     } 
  
-  static  int8_t decodeBS(bool *code ) {
+  int8_t decodeBS(bool *code ) {
     //  2 = 010
     //  1 = 001
     //  0 = 000
@@ -80,8 +80,11 @@ struct _DEMUX demx;
    else return 99;
    }
   
+  
+  
    void demxcode(void) {
-      
+     
+             
     //SD0 bit stream BS0   
       demx.SD0[0]= mb->to_demux[0] & B0_msk; 
       demx.SD0[1]= mb->to_demux[0] & B1_msk;
@@ -98,27 +101,37 @@ struct _DEMUX demx;
       demx.SDV1[2]= mb->to_demux[2] & B0_msk;      
       
     //SDI2  bit stream BS3
-      demx.SDI2[0]= mb->to_demux[2] & B1_msk;   //wrong
+      demx.SDI2[0]= mb->to_demux[2] & B1_msk;  
       demx.SDI2[1]= mb->to_demux[2] & B2_msk;   
       demx.SDI2[2]=  mb->to_demux[2]& B3_msk;   
       
     //SDV2  bit stream BS4
 
-      demx.SDV2[0] = mb->to_demux[3] & B0_msk; //wrong
+      demx.SDV2[0] = mb->to_demux[3] & B0_msk; 
       demx.SDV2[1] = mb->to_demux[3] & B1_msk; 
       demx.SDV2[2] = mb->to_demux[3] & B2_msk; 
-      
+         
       //mx.BD3[3] = false; 
       mb->to_bs[0] = decodeBS(demx.SD0);
       mb->to_bs[1] = decodeBS(demx.SDI1);
       mb->to_bs[2] = decodeBS(demx.SDV1);
       mb->to_bs[3] = decodeBS(demx.SDI2);
       mb->to_bs[4] = decodeBS(demx.SDV2);
-      
-     
+ 
     } 
  
-
+ void demxcode_bs0(void) {   
+   // for runtime measurement
+    //SD0 bit stream BS0   
+      demx.SD0[0]= mb->to_demux[0] & B0_msk; 
+      demx.SD0[1]= mb->to_demux[0] & B1_msk;
+      demx.SD0[2]= mb->to_demux[0] & B2_msk;
+    
+      //mx.BD3[3] = false; 
+      mb->to_bs[0] = decodeBS(demx.SD0);
+    } 
+  
+  
   
  static void Drive_IO(void) {
      uint32_t i; 

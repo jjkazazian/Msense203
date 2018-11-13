@@ -114,7 +114,7 @@ static uint8_t _Pc_configureLinkList(Pio *pPcHw, void *pXdmad, PcCmd *pCommand)
 						 XDMAC_CC_CSIZE_CHK_1 |
 						 XDMAC_CC_DWIDTH_BYTE |
 						 XDMAC_CC_SIF_AHB_IF1 |
-						 XDMAC_CC_DIF_AHB_IF1 |
+						 XDMAC_CC_DIF_AHB_IF0 |  // jjk
 						 XDMAC_CC_SAM_FIXED_AM |
 						 XDMAC_CC_DAM_INCREMENTED_AM |
 						 XDMAC_CC_PERID(

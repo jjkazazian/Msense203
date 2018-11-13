@@ -10,13 +10,14 @@
 
 #define BUFFER_NUMBER     2                 // numbers of buffers to acquire
 #define CICOSR           64                 // Comb filter decimation factor
-#define CIC_NUMBER       256                // sample number ofter CIC filter
+#define CIC_NUMBER       107                 // sample number ofter CIC filter
 #define SAMPLES_NUMBER   CIC_NUMBER*CICOSR  // numbers of signal Word samples of bitstream 
 #define ND               SAMPLES_NUMBER*4   // numbers of byte acquisitions for the DMA
 
-#define ASTACK 0x20400018  // stack base address
-#define SSTACK 0x2000      // stack size
-
+#define ASTACK 0x204000a0  // stack base address
+#define SSTACK 0x1000      // stack size
+//#define ENABLE_TCM // also made in IAR preprocessing
+#define FFT_DEMO   //  128kB
 
 COMPILER_PACK_SET(4)
 typedef struct   {
@@ -70,8 +71,8 @@ COMPILER_PACK_RESET()
 #define PIN_D2     {PIO_PC19, PIOC, ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT}
 #define PIN_D3     {PIO_PA2,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
 #define PIN_Fsync  {PIO_PC13, PIOC, ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_clkb   {PIO_PA19,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
-//#define PIN_clkb   {PIO_PB4, PIOB, ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT}
+#define PIN_clkb   {PIO_PA19, PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
+#define PIN_6      {PIO_PB3,  PIOB, ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT}
 // // capture
 #define PIN_CD0  {PIO_PA3,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
 #define PIN_CD1  {PIO_PA4,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
@@ -81,7 +82,7 @@ COMPILER_PACK_RESET()
 #define PIN_pclk {PIO_PA22, PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
 
 /** List of all mux output definitions. */
-#define PINS_MUXout  {PIN_D0,  PIN_D1,  PIN_D2,  PIN_D3,  PIN_Fsync, PIN_clkb}
+#define PINS_MUXout  {PIN_D0,  PIN_D1,  PIN_D2,  PIN_D3,  PIN_Fsync, PIN_clkb, PIN_6}
 /** List of all PIO Capture */
 #define PINS_capture {PIN_CD0, PIN_CD1, PIN_CD2, PIN_CD3, PIN_CD4,   PIN_pclk}
 

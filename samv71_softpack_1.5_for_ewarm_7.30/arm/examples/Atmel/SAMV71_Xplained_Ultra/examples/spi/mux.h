@@ -61,7 +61,8 @@ struct _DEMUX  {
   } __attribute__((packed)) ;
 
  void BS_2_IO(void);
+ int8_t decodeBS(bool *code ); 
  void demxcode(void);
-
+ void demxcode_bs0(void);
 #endif /* ! _MUX_H */
 

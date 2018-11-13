@@ -62,18 +62,21 @@ void _pc_dmaTransfer(uint32_t *Pbuffer)
 
 bool Unpack(uint32_t *in) { 
 //
-  
+ 
   uint32_t j;
   uint8_t data[4];
   
+        
         for (j = 0; j < 4; j++) {
               data[j] = (uint8_t)((in[mb->count] >> 8*j) & 0x1F);  // byte data extraction from 32 bits
-              up.sync = (uint8_t)((data[j]  >> 4)   & 0x1);   // synchro bit extraction
-              up.csum = up.csum + up.sync;  // cumulate sync to count up to sample number 
+              up.sync = (uint8_t)((data[j]  >> 4)   & 0x1);        // synchro bit extraction
+              // up.csum = up.csum + up.sync;  // cumulate sync to count up to sample number 
               if (up.synchronized && (up.sync == 1) && (up.kase != 3-j)) {up.kase = 4; up.synchronized = false;}// check for synchronization error
               if (up.sync == 1) {up.kase = 3-j; up.synchronized = true;}   // case detection 0:0001 1:0010 2:0100 3:1000   
         }
+    
         
+          
         switch(up.kase) {
         // Reorder data to fit the synchronization
 
@@ -112,19 +115,64 @@ bool Unpack(uint32_t *in) {
                  default:
                   printf("---ERROR Synchro lost \n\r");
        }
-        
+      
+       
+      
+     
        demxcode();
-
+          
        up.predata[0] = data[0];
        up.predata[1] = data[1];
        up.predata[2] = data[2];
        up.predata[3] = data[3];
-
+ 
        if (up.i == SAMPLES_NUMBER-1) up.i=0;  else up.i++;
-            
+     
        return up.status;
+       
 }
 
+void Unpack_bs0(uint32_t *in) { 
+// for runtime measurement
+ 
+  uint32_t j;
+  uint8_t data[4];
+  
+        
+        for (j = 0; j < 4; j++) {
+              data[j] = (uint8_t)((in[mb->count] >> 8*j) & 0x1F);  // byte data extraction from 32 bits   
+        }
+
+                    mb->to_demux[0] = data[0];
+
+       demxcode_bs0();
+       
+}
+
+void Unpack_64b_bs0(uint32_t *in) { 
+// for runtime measurement
+ 
+  mb->to_bs[0] = 0;
+  mb->to_bs[0] =  
+                  (in[mb->count]  & B2_msk) << 5
+                | (in[mb->count]  & B2_msk) << 4
+                | (in[mb->count]  & B2_msk) << 3
+                | (in[mb->count]  & B2_msk) << 2
+                | (in[mb->count]  & B2_msk) << 1
+                | (in[mb->count]  & B2_msk)  
+                | (in[mb->count]  & B1_msk)  
+                | (in[mb->count]  & B0_msk);
+  /*
+printf("  in= %x  B2=%x B1=%x B0=%x  bs=%d \r\n"
+      ,  in[mb->count]
+      ,  in[mb->count]  & B2_msk 
+      ,  in[mb->count]  & B1_msk  
+      ,  in[mb->count]  & B0_msk
+      ,  mb->to_bs[0]
+);
+*/
+
+}
 
 
 void PIO_Capture_DMA(bool switch_buffer) {

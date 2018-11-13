@@ -67,7 +67,7 @@ static void Sin_Config(void)
 n   = 16;                     // 16 bits signed signal full scale
 FS  = (int)round(pow(2,n));   // +/-2^n dynamic = +/-FS/2
 amp = FS/4;                   // 16 bits full scale  
-fin = 1200;                   // requested input signal frequency
+fin = 150;                     // requested input signal frequency
 Tin = M/(float)fin;           // clock period MicroSecond
 T   = M/(float)BSCLOCK;       // clock period MicroSecond
 N   = (int)round(Tin/T);      // sinus Numbers of point
@@ -262,11 +262,11 @@ void DSP(void)
 
           if (nsinus == N-1) nsinus=0; else nsinus++;
           
-          mod0.xin = 0;
+          mod0.xin = sin;
           mod1.xin = 0;
           mod2.xin = 0;
           mod3.xin = 0;
-          mod4.xin = sin;
+          mod4.xin = 0;
        
           Modulator(&mod0);
           Modulator(&mod1);

@@ -11,6 +11,7 @@
  *----------------------------------------------------------------------------*/
 static uint32_t dbg_baudrate = 115200;
 extern MAILBOX *mb; 
+//extern MAILBOX mbox; 
 
 //Pin for muxout
 extern const Pin mux_pins[]       = PINS_MUXout;
@@ -164,49 +165,71 @@ void IO_clear(uint32_t pinnb)
 {
  PIO_Clear(&mux_pins[pinnb]);      
 }
+static void Memory_Config_TCM(MAILBOX *pmb){
+ /* 384kbyte   = 96000 words of 32 bits*/
 
-void Memory_Config(MAILBOX *pmb){
- /* 384kbyte   = 96000 words of 32 bits
-    sizeof(mb) = 23056 Words
-   29 600 bytes of readonly  code memory
-    4 160 bytes of readonly  data memory
-  116 584 bytes of readwrite data memory
-  
-  */
   
   uint32_t mb_size;
   uint32_t limit;
   uint32_t *pDestmb;
   
   mb_size = sizeof(MAILBOX);
-  limit = (uint32_t)&pmb + (uint32_t)mb_size;
- 
-                    //fill mb with 0xDEADFACE Pattern 
+  limit = (uint32_t)pmb + (uint32_t)mb_size;
+  printf("\r\n TCM \r\n");
+  printf("        Malloc Mailbox address        = %x   \r\n", (uint32_t)pmb);
+  printf("        address limit Mailbox buffer  = %x   \r\n", (uint32_t *)limit); 
+  printf("       (bytes) Malloc Mailbox size    = %d   \r\n", mb_size);
+
+  printf("       (bytes) A,B,C buffers          = %d   \r\n", SAMPLES_NUMBER*4*2+CIC_NUMBER*BUFFER_NUMBER); 
+       //  fill with 0xDEADFACE Pattern 
        for (pDestmb = (uint32_t *)pmb; pDestmb < (uint32_t *)limit; pDestmb++) 
        {
        *pDestmb = 0xDEADFACE;
        }
   printf("\r\n");
-  printf("        Malloc Mailbox address        = %x   \r\n", pmb);
+
+
+  printf("\r\n");
+  
+}
+static void Memory_Config(MAILBOX *pmb){
+ 
+  uint32_t mb_size;
+  uint32_t limit;
+  uint32_t *pDestmb;
+  
+  mb_size = sizeof(MAILBOX);
+  limit = (uint32_t)&pmb + (uint32_t)mb_size;
+  
+  printf("\r\n RAM \r\n");
+  printf("        Malloc Mailbox address        = %x   \r\n", (uint32_t)&pmb);
   printf("        address limit Mailbox buffer  = %x   \r\n", (uint32_t *)limit); 
   printf("       (bytes) Malloc Mailbox size    = %d   \r\n", mb_size);
 
-  printf("       (bytes) SAMPLES_NUMBER         = %d   \r\n", SAMPLES_NUMBER); 
-
+  printf("       (bytes) A,B,C buffers          = %d   \r\n", SAMPLES_NUMBER*4*2+CIC_NUMBER*BUFFER_NUMBER); 
+       //  fill with 0xDEADFACE Pattern 
+       for (pDestmb = (uint32_t *)pmb; pDestmb < (uint32_t *)limit; pDestmb++) 
+       {
+       *pDestmb = 0xDEADFACE;
+       }
   printf("\r\n");
+
+
+
   
 }
 
 void Main_Config(void)
 {
-  uint32_t *pDest;
+  /*
+       uint32_t *pDest;
   
          // fill Stack with 0xFEEDFACE Pattern 
        for (pDest = (uint32_t *)ASTACK; pDest < (uint32_t *)(ASTACK+SSTACK);) 
        {
               *pDest++ = 0xFEEDFACE;
        }
-
+*/
        /* Enable I and D cache */
 	SCB_EnableICache();
 	//SCB_EnableDCache(); // if activated: need static cluster optimization 
@@ -232,9 +255,11 @@ void Main_Config(void)
         PIOA->PIO_PPDER |= PIO_PPDER_P9;
         PIOA->PIO_PPDER |= PIO_PPDER_P10;
         
-        Memory_Config(mb);
-        mb->count=0;
+    //    Memory_Config_TCM(&mbox);
+        Memory_Config_TCM(mb);
         
+        mb->count=0;
+        printf("--- End of Memory configuration \n\r");
         
 }
 /** \endcond */
