@@ -43,11 +43,13 @@ void Print_int8_to_bin(uint8_t k)
 void Print_byte(char *a, uint8_t b)
 //Syntax is Print_byte("toto", value);
 { 
-printf(" %s ",a); 
+printf("%s ",a); 
 Print_int8_to_bin(b); 
 printf("\r\n");
 
 }
+
+
 
 double randone(void) 
 {//randf= +/-1
@@ -186,9 +188,6 @@ static void Memory_Config_TCM(MAILBOX *pmb){
        {
        *pDestmb = 0xDEADFACE;
        }
-  printf("\r\n");
-
-
   printf("\r\n");
   
 }

@@ -15,9 +15,6 @@ extern MAILBOX *mb;
 
 struct _UNPACK up;
 
-
-// DMA
-
 /** Global DMA driver for all transfer */
 static sXdmad dmad;
 
@@ -33,21 +30,20 @@ static PcCmd PcCommand;
  *----------------------------------------------------------------------------*/
 
 /* \brief xDMA interrupt handler.*/
+/*
 void XDMAC_Handler(void)
 {
 	XDMAD_Handler(&dmad);
+     
 }
-
+*/
 /* \brief Callback function for parallele capture interrupt*/
 static void _pc_Callback(int dummy, void* pArg)
 {
 	dummy = dummy;
 	pArg = pArg;
 	//Processing the DMA buffer //////////////////////////////////////
-        
-        
         mb-> dmacall =  false;
-        
 	}
 
 /*\brief Configure parallele capture DMA and start DMA transfer.*/
@@ -178,8 +174,12 @@ printf("  in= %x  B2=%x B1=%x B0=%x  bs=%d \r\n"
 void PIO_Capture_DMA(bool switch_buffer) {
     /* initialize PIO DMA mode*/ 
   
-  if (switch_buffer) _pc_dmaTransfer(mb->B); else _pc_dmaTransfer(mb->A);
+ /// if (switch_buffer) _pc_dmaTransfer(mb->B); else _pc_dmaTransfer(mb->A);
  
+  DMA_Buffer_cfg(mb->A, mb->B, ND);
+  DMA_PIO_cfg();
+  DMA_Start();
+  
 }
 
 void Enable_Capture(void) {

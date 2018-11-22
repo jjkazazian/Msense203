@@ -2,6 +2,30 @@
 #define _PC_DMA_H
 
 /*----------------------------------------------------------------------------
+ *        new jjk
+ *----------------------------------------------------------------------------*/
+   /** transfer complete callback. */
+
+#define DMA_PMC_POS 26
+
+typedef void (*dmaCallback)(uint32_t, void *);
+   
+   
+   typedef struct {////jjk
+  	/** Pointer to the Rx data. */
+	uint32_t *pRxBuffA;
+	/** Pointer to the Rx data. */
+	uint32_t *pRxBuffB;
+	/** Rx size in bytes. */
+	uint32_t RxSize;
+	/** Callback function invoked at the end of transfer. */
+	dmaCallback callback;
+	/** Callback arguments. */
+	void *pArgument;
+} DMAconfig; //two buffer A, B acquisition 
+   
+
+/*----------------------------------------------------------------------------
  *        Types
  *----------------------------------------------------------------------------*/
 
@@ -11,7 +35,9 @@ typedef void (*PcCallback)(uint8_t, void *);
 /*----------------------------------------------------------------------------
  *       Struct
  *----------------------------------------------------------------------------*/
-/**  This structure is sent to the parallel capture function to start the transfer.
+
+   
+   /**  This structure is sent to the parallel capture function to start the transfer.
  * At the end of the transfer, the callback is invoked by the interrupt handler.
  */
 typedef struct {
@@ -26,7 +52,7 @@ typedef struct {
 } PcCmd;
 
 
-/** Constant structure associated with AFE port. This structure prevents
+/** Constant structure associated with pio port. This structure prevents
     client applications to have access in the same time. */
 typedef struct {
 	/** Pointer to parallel capture Hardware registers */
@@ -59,5 +85,9 @@ extern uint32_t Pc_ConfigureDma(PcDma *pPc ,
 
 extern uint32_t Pc_SendData(PcDma *pPc, PcCmd *pCommand);
 
-
+void DMA_Buffer_cfg( uint32_t *PbufferA, uint32_t *PbufferB, uint32_t size);
+void DMA_PIO_cfg(void);
+bool DMA_Status(void);
+bool DMA_Start(void);
+void XDMAC_Handler(void);
 #endif /* ! _PC_DMA_H */

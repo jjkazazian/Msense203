@@ -67,7 +67,7 @@ static void Sin_Config(void)
 n   = 16;                     // 16 bits signed signal full scale
 FS  = (int)round(pow(2,n));   // +/-2^n dynamic = +/-FS/2
 amp = FS/4;                   // 16 bits full scale  
-fin = 150;                     // requested input signal frequency
+fin = 70;                     // requested input signal frequency
 Tin = M/(float)fin;           // clock period MicroSecond
 T   = M/(float)BSCLOCK;       // clock period MicroSecond
 N   = (int)round(Tin/T);      // sinus Numbers of point

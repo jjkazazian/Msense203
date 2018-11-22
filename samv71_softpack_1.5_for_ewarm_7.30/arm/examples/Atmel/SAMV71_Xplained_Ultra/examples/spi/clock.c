@@ -51,6 +51,11 @@ void Clock_Config(void)
 	PIO_Configure(&pinPCK, 1);
 	TimeTick_Configure();
 
+        
+       /* Enable clock of the DMA peripheral */
+	if (!PMC_IsPeriphEnabled(ID_XDMAC))
+        PMC_EnablePeripheral(ID_XDMAC);
+        
 	/* Configure PCK0 as peripheral */
         CalcPmcParam();
         PMC_EnablePeripheral(ID_PIOC);

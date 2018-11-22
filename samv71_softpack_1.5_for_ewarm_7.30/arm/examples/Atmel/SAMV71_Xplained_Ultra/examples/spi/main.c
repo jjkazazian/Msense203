@@ -87,7 +87,7 @@ static void PIO_Generation(void) {
         uint32_t j;
  
        // mb = (MAILBOX *)malloc( sizeof(MAILBOX)); changed to TCM     
-        
+
         Main_Config();
         Clock_Config();        
         Sense_Config();
@@ -105,7 +105,7 @@ static void PIO_Generation(void) {
          // IO_ctrl(6,0);  
          
         // Fill the first buffer 
-        printf("   START  \n\r");
+        printf(I"START  \n\r");
         if (mb->dmaswitch) mb->Pab = mb->A; else mb->Pab = mb->B;  
         PIO_Capture_DMA( mb -> dmaswitch);
         Reset();
@@ -120,8 +120,8 @@ doitagain:
   while (mainloop_repeat) {
 
         buff_nb_count++;   
-        //printf("   buff: %d  \n\r", buff_nb_count);
-        PIO_Capture_DMA(mb -> dmaswitch);  // 0 for A, 1 for B
+
+        //PIO_Capture_DMA(mb -> dmaswitch);  // 0 for A, 1 for B
         if (mb->dmaswitch) mb->Pab = mb->A; else mb->Pab = mb->B; 
 
 	while (mb->repeat) { 
@@ -144,7 +144,7 @@ doitagain:
      
              if (CIC(0, mb->to_bs[0])) { 
                j=k/CICOSR-1;
-               //mb->CIC_C[j] = mb->CIC0;
+               mb->CIC_C[j] = mb->CIC0;
                //printf(" %d, %d \n\r" ,j, mb->CIC_C[j]); 
              }
              
@@ -163,22 +163,22 @@ doitagain:
          if ( buff_nb_count == BUFFER_NUMBER) {
               mainloop_repeat = false;
               buff_nb_count = 0; 
-             // printf("   STOP  \n\r");
-              //Print_Buffer(mb->CIC_C);
+             // printf(I"STOP  \n\r");
+              Print_Buffer(mb->CIC_C);
    
          }
          
   }
-   /*
+   
         if (doit == 0) { 
-          printf("\r\n   End of Program:  k= %d \r\n", k/CICOSR); 
+          printf(I"End of Program:  k= %d \r\n", k/CICOSR); 
           
                   while (1); 
         } else doit++;
-*/
+
   goto doitagain;
   
-  printf("    End of Program \r\n");
+  printf(I"End of Program \r\n");
   while (1);
 }
 /** \endcond */

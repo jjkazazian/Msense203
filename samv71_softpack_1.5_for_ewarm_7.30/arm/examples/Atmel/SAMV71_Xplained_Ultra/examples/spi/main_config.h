@@ -5,19 +5,22 @@
 #include "mux.h"
 #include "capture.h"
 
+#define I "<I> "
+#define E "<E> "
+
 #define MIN(a,b) (((a)<(b))?(a):(b)) // minus   = MIN(mean, minus);
 #define MAX(a,b) (((a)>(b))?(a):(b)) // maximus = MAX(mean, maximus); 
 
-#define BUFFER_NUMBER     2                 // numbers of buffers to acquire
-#define CICOSR           64                 // Comb filter decimation factor
-#define CIC_NUMBER       107                 // sample number ofter CIC filter
-#define SAMPLES_NUMBER   CIC_NUMBER*CICOSR  // numbers of signal Word samples of bitstream 
-#define ND               SAMPLES_NUMBER*4   // numbers of byte acquisitions for the DMA
+#define BUFFER_NUMBER     4                  // numbers of buffers to acquire
+#define CICOSR           64                  // Comb filter decimation factor
+#define CIC_NUMBER       229                 // sample number ofter CIC filter
+#define SAMPLES_NUMBER   CIC_NUMBER*CICOSR   // numbers of signal Word samples of bitstream 
+#define ND               SAMPLES_NUMBER*4    // numbers of byte acquisitions for the DMA
 
 #define ASTACK 0x204000a0  // stack base address
 #define SSTACK 0x1000      // stack size
-//#define ENABLE_TCM // also made in IAR preprocessing
-#define FFT_DEMO   //  128kB
+//#define ENABLE_TCM //  made in IAR preprocessing
+#define FFT_DEMO   //  floating point unit
 
 COMPILER_PACK_SET(4)
 typedef struct   {
