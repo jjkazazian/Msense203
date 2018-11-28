@@ -41,8 +41,7 @@ static LinkedListDescriporView0 *pview0B = (LinkedListDescriporView0 *)&view0B;
 /* \brief xDMA interrupt handler.*/
  void XDMAC_Handler(void)
 {
-	XDMAD_Handler(pxdmad);
-     
+	XDMAD_Handler(pxdmad); 
 }
 
 
@@ -55,7 +54,7 @@ static void p0_Callback(int dummy, void* pArg)
         // to do !!!!!!!!!
         mb-> dmacall =  false;
 	// read in DMA if A or B can be processed and report in dmastatus
-        if (read_dma_status==0) dmastatus=true; else dmastatus=false;
+        // if (read_dma_status==0) dmastatus=true; else dmastatus=false;
 	}
 
 
@@ -77,6 +76,10 @@ bool DMA_Status(void){
 bool DMA_Start(void){
 XDMAD_StartTransfer(pxdmad,RxChannel);   
   return true;
+}
+
+void DMA_Enable(void){
+XDMAC_EnableChannel(xdmad.pXdmacs,RxChannel);
 }
 
 /**
@@ -111,8 +114,8 @@ static void Print_DMA_ChStatus(sXdmad *ptrxdmad)
 
 static void print_DMA_enabled(void)
 {
-      char a[] = I"DMA Enabled\r\n";
-      char b[] = I"DMA Not Enabled\r\n";
+      char a[] = I"DMA Periph clock enabled\r\n";
+      char b[] = I"DMA Periph clock not enabled\r\n";
       uint32_t reg;
       reg =  PMC_IsPeriphEnabled(ID_XDMAC);
       reg = (reg >> DMA_PMC_POS) & 0x1u;
@@ -145,7 +148,6 @@ static void print_DMA_enabled(void)
 
         // Initialization to zero
         XDMAD_Initialize(pxdmad, 0);
-        printf(I"DMA free channel 0x%x\r\n"), XDMAD_FreeChannel(pxdmad, RxChannel);
 
         // Allocate one channel, return Rxchannel
         RxChannel =  XDMAD_AllocateChannel(pxdmad, pioId, XDMAD_TRANSFER_MEMORY);
@@ -175,13 +177,7 @@ static void print_DMA_enabled(void)
         
         XDMAD_SetCallback(pxdmad,RxChannel,(XdmadTransferCallback)dmacfg.callback,dmacfg.pArgument);
              
-	/* Setup RX Link List 
-        
-	dmadRxCfg.mbr_ubc =  XDMA_UBC_NVIEW_NDV0 |
-                             XDMA_UBC_NDE_FETCH_EN |
-                             XDMA_UBC_NDEN_UPDATED |
-                             dmacfg.RxSize;
-        */
+
         dmadRxCfg.mbr_sa = (uint32_t) &pioRx->PIO_PCRHR;     // PIOA Source buffer
 	dmadRxCfg.mbr_da = (uint32_t) dmacfg.pRxBuffA;       // DMA struct cfg
 
@@ -202,35 +198,51 @@ static void print_DMA_enabled(void)
 
 	dmaInt = XDMAC_CIE_LIE |
                  XDMAC_CIE_BIE;
-                  /*|
-                  XDMAC_CIE_DIE   |
-                  XDMAC_CIE_FIE   |
-                  XDMAC_CIE_RBIE  |
-                  XDMAC_CIE_WBIE  |
-                  XDMAC_CIE_ROIE  ;
-        */
+   
         dmaCndc =  XDMAC_CNDC_NDVIEW_NDV0 |
                    XDMAC_CNDC_NDE_DSCR_FETCH_EN |
                    XDMAC_CNDC_NDSUP_SRC_PARAMS_UNCHANGED |
                    XDMAC_CNDC_NDDUP_DST_PARAMS_UPDATED;  
         
-      XDMAD_ConfigureTransfer(pxdmad, RxChannel ,&dmadRxCfg, dmaCndc, (uint32_t)pview0A, dmaInt);
-      
-   
-      
+        XDMAD_ConfigureTransfer(pxdmad, RxChannel ,&dmadRxCfg, dmaCndc, (uint32_t)pview0A, dmaInt);
+
       NVIC_SetPriority(XDMAC_IRQn , 1);
       NVIC_EnableIRQ(XDMAC_IRQn);
-      
-      
-      print_DMA_GlobalChStatus(pxdmad->pXdmacs);
-      printf(I"End of DMA config \r\n");     
-      
 
+   // print_DMA_GlobalChStatus(pxdmad->pXdmacs);
+      printf(I"End of DMA config \r\n");     
 }   
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*----------------------------------------------------------------------------
- *      
+ *      old functions
  *----------------------------------------------------------------------------*/
 
 /*  DMA driver instance */

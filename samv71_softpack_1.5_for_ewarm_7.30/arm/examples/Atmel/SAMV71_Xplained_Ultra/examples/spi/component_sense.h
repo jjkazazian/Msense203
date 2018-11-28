@@ -66,7 +66,7 @@ typedef struct {
 /* Various definitions */
 
 #define SENSE   ((Sense *)0x00U) /**< \brief (SENSE  ) Base Address */
-#define addr(member)  (uint8_t)(__INTADDR__((&(SENSE)->member)))  // extract addr value of a field
+#define Addr(member)  (uint8_t)(__INTADDR__((&(SENSE)->member)))  // extract addr value of a field
         //spibox.addr =  (uint8_t)&SENSE->ADCI0_TAG;
         //spibox.addr =  (uint8_t)offsetof(Sense, ADCI0_TAG);
 
@@ -89,15 +89,16 @@ enum osr {
 
 
 /* -------- SDI0 : (Sense Offset:0x20) ADC I0 Control register -------- */
-#define SDI0_ONADCI0      (0x1u << 0)   /**< \brief enable adc */
-#define SDI0_GAINI0_Pos    4            /**< \brief field position */
-#define SDI0_GAINI0_Msk   (0x3u << SDI0_GAINI0_Pos) /**< \brief "11" 2 bits mask */
-#define SDI0_GAINI0(value) ((SDI0_GAINI0_Msk & ((value) << SDI0_GAINI0_Pos))) // see enum gain for value
-#define SDI0_GAINI0_ADC_GAINX1  (0x0u << 4) /**< \brief SDI0_GAINI0(value) gain value 1*/
-#define SDI0_GAINI0_ADC_GAINX2  (0x1u << 4) /**< \brief SDI0_GAINI0(value) gain value 2*/
-#define SDI0_GAINI0_ADC_GAINX4  (0x2u << 4) /**< \brief SDI0_GAINI0(value) gain value 4*/
-#define SDI0_GAINI0_ADC_GAINX8  (0x3u << 4) /**< \brief SDI0_GAINI0(value) gain value 8*/
-#define SDI0_TEMPMEAS  (0x1u << 1) /**< \brief Temperature Measurement Activation */
+#define ONADC      (0x1u << 0)   /**< \brief enable adc */
+#define GAIN_Pos    4            /**< \brief field position */
+#define GAIN_Msk   (0x3u << GAIN_Pos) /**< \brief "11" 2 bits mask */
+#define GAIN(value) ((GAIN_Msk & ((value) << GAIN_Pos))) // see enum gain for value
+#define GAIN_ADC_GAINX1  (0x0u << GAIN_Pos) /**< \brief SDI0_GAINI0(value) gain value 1*/
+#define GAIN_ADC_GAINX2  (0x1u << GAIN_Pos) /**< \brief SDI0_GAINI0(value) gain value 2*/
+#define GAIN_ADC_GAINX4  (0x2u << GAIN_Pos) /**< \brief SDI0_GAINI0(value) gain value 4*/
+#define GAIN_ADC_GAINX8  (0x3u << GAIN_Pos) /**< \brief SDI0_GAINI0(value) gain value 8*/
+#define SDI0_TEMPMEAS         (0x1u << 1) /**< \brief Temperature Measurement Activation */
+
 
 
 

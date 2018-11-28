@@ -35,9 +35,9 @@ static uint32_t TcClks;
 
 printf("\n\r=======================Timer counter ========================\n\r" );
 
-printf(" timer  ok: %d \n\r", TC_FindMckDivisor(4000000, BOARD_MCK, &Div, &TcClks, BOARD_MCK));
-printf(" timer div: %d \n\r", Div );
-printf(" timer clk: %d \n\r", TcClks );
+printf(I"Timer  ok: %d \n\r", TC_FindMckDivisor(4000000, BOARD_MCK, &Div, &TcClks, BOARD_MCK));
+printf(I"Timer div: %d \n\r", Div );
+printf(I"Timer clk: %d \n\r", TcClks );
 
 	TC_Configure(TC1, 0, TcClks);
         TC_Start(TC1, 0);
@@ -59,9 +59,9 @@ void Clock_Config(void)
 	/* Configure PCK0 as peripheral */
         CalcPmcParam();
         PMC_EnablePeripheral(ID_PIOC);
-        Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75));
+        Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75)); //75 for 4MHz
         
-	printf("\n\r --- Current PMC clock from start-up configuration --- \n\r");
+	printf(I"Current PMC clock from start-up configuration \n\r");
         Timer_Counter();
 	DumpPmcConfiguration();
         
@@ -109,7 +109,8 @@ void DumpPmcConfiguration(void)
 			'X' : ' ';
 	printf("\n\r    SLOW_CLK [%c]\n\r    MAIN_CLK [%c]\n\r    PLLA_CLK [%c]\n\r    UPLL_CLK [%c]\n\r     MCK_CLK [%c]\n\r",
 			ucChar[0], ucChar[1], ucChar[2], ucChar[3], ucChar[4]);
-        printf("\n\r-I- external 4MHz main clock on PCK0 ...\n\r");
+        printf(I"\n\r");
+        printf(I"External main clock on PCK0 ...\n\r");
 	printf("==============================================================\n\r");
 }
 
@@ -128,8 +129,26 @@ void Configure_Pck0(uint32_t css, uint32_t pres)
 	/* Enable programmable clock 1 output */
 	REG_PMC_SCER = PMC_SCER_PCK0;
 	/* Wait for the PCKRDY1 bit to be set in the PMC_SR register*/
+	while ((REG_PMC_SR & PMC_SR_PCKRDY0) == 0 );	
+}
+
+void Configure_Pck0_onthefly(uint32_t css, uint32_t pres)
+{
+	/* Enable the DAC master clock */
+	PMC->PMC_PCK[0] = css | pres;
+}
+
+void Configure_Pck0_disable(void)
+{
+	/* Disable programmable clock 1 output */
+	REG_PMC_SCDR = PMC_SCER_PCK0;
+}
+
+void Configure_Pck0_enable(void)
+{
+	REG_PMC_SCER = PMC_SCER_PCK0;
+	/* Wait for the PCKRDY1 bit to be set in the PMC_SR register*/
 	while ((REG_PMC_SR & PMC_SR_PCKRDY0) == 0 );
-	
 }
 
 

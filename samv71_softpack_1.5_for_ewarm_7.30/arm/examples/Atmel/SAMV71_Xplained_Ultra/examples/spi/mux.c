@@ -29,11 +29,11 @@ struct _DEMUX demx;
     // BS4,  BS3,  BS2,  BS1,  BS0    
     // SDV2, SDI2, SDV1, SDI1, SD0    
      // Bitstream values   
-        //  2 = 010
-        //  1 = 001
-        //  0 = 000
-        // -1 = 111
-        // -2 = 110
+        //  2 = 010 unsigned 2
+        //  1 = 001 unsigned 1
+        //  0 = 000 unsigned 0
+        // -1 = 111 unsigned 7
+        // -2 = 110 unsigned 6
       mx.D3[0] = mb->BS1 & B0_msk;  // SDI1(0)
       mx.D3[1] = mb->BS2 & B1_msk;  // SDV1(1)
       mx.D3[2] = mb->BS3 & B2_msk;  // SDI2(2)

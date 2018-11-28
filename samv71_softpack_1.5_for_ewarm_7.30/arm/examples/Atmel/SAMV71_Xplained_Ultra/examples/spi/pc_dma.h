@@ -89,5 +89,6 @@ void DMA_Buffer_cfg( uint32_t *PbufferA, uint32_t *PbufferB, uint32_t size);
 void DMA_PIO_cfg(void);
 bool DMA_Status(void);
 bool DMA_Start(void);
+void DMA_Enable(void);
 void XDMAC_Handler(void);
 #endif /* ! _PC_DMA_H */

@@ -92,11 +92,14 @@ static void Init_SPI(void)
 static void Print_Registers(uint8_t n) {
   uint32_t i;
   for (i = 0; i < n; i++) {
-              printf("   Registers [0x%x] = \t0x%04x ", i, registers [(uint8_t)i]);  
+              printf(I"Register [0x%x] = \t0x%04x ", i, registers [(uint8_t)i]);  
               Print_int8_to_bin((uint8_t)registers [(uint8_t)i]);
               printf("\n\r");
   }
 }
+
+
+
 
 static bool check_RDRF(Spi *spi) {
         bool     wait=true;
@@ -134,7 +137,7 @@ static uint8_t Sense_Read(uint8_t addr)
        // while ((spibox.spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	 
         
         if (check_RDRF(spibox.spi)) data = spibox.spi->SPI_RDR; // read data
-        registers[addr] = 0x0000;      // reset register
+        registers[addr] = 0x0000;      // reset register cell
         registers[addr] = (addr)<< 8 | (uint8_t)data; // 0+addr+data  
 
         return data;  
@@ -153,40 +156,53 @@ static void Sense_Write( uint8_t addr, volatile  uint8_t Data)
         while ((spibox.spi->SPI_SR & SPI_SR_TDRE) == 0);
         
   
-        TRACE_INFO("WRITE sense register [ addr/data ]=0x%02x\n\r",  data);	
+        printf(I"WRITE sense register [ addr/data ]=0x%02x\n\r",  data);	
         
 }
 
 static void Analog_Config(void)
 {
          // clear register
-        Sense_Write(addr(ANA_CTRL), 0x0);
+        Sense_Write(Addr(ANA_CTRL), 0x0);
          // write new config
-        Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
+        Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
         Wait(1);
-        Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONREF);
+        Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONREF);
         Wait(1);
-        Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONBIAS);
+        Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONBIAS);
         Wait(1); 
+        
 }
 
-static void Set_Channel(uint32_t TEMP)
+static void Set_Channels(void)
 {
-        Sense_Write(addr(ANA_CTRL), Sense_Read(addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
-  
+        Sense_Write(Addr(SDI0),  ONADC | GAIN_ADC_GAINX1 | SDI0_TEMPMEAS);
+        Sense_Write(Addr(SDI1),  0 | GAIN_ADC_GAINX1);
+        Sense_Write(Addr(SDV1),  0 );
+        Sense_Write(Addr(SDI2),  0 | GAIN_ADC_GAINX1);
+        Sense_Write(Addr(SDV2),  0 );
 }
 
+void Sense_Reset_at(uint32_t r)
+{
+        // Soft reset
+        spibox.addr  = REG_SOFT_NRESET;
+        spibox.data  = r;
+        Sense_Write(spibox.addr, spibox.data);
+}
 
 
 void  Sense_Config(void) {
 
         Init_SPI(); 
-        
-        spibox.addr  = REG_SOFT_NRESET;
+        // Soft reset
+        spibox.addr  = Addr(SOFT_NRESET);
         spibox.data  = 0x0f;
         Sense_Write(spibox.addr, spibox.data);
-        
+
+        // Analog configuration , VDDANA, VREF, VBIAS
         Analog_Config();
+        Set_Channels();
 }        
         
 
@@ -194,12 +210,18 @@ void  Sense_Config(void) {
 void  Sense_Dump_param(void){
   /* access to the sense registers */  
 
-        Sense_Read(addr(ADCV1_TAG)); 
-        Sense_Read(addr(ADCV2_TAG));      
-        Sense_Read(addr(ADCV3_TAG));          
-        Sense_Read(addr(ANA_CTRL)); 
-              
-   Print_Registers(45);     
+        Sense_Read(Addr(ADCV1_TAG)); 
+        Sense_Read(Addr(ADCV2_TAG));      
+        Sense_Read(Addr(ADCV3_TAG));          
+        Sense_Read(Addr(ANA_CTRL)); 
+        Sense_Read(Addr(SDI0));
+        Sense_Read(Addr(SDI1));
+        Sense_Read(Addr(SDV1));
+        Sense_Read(Addr(SDI2));
+        Sense_Read(Addr(SDV2));  
+        Sense_Read(Addr(SOFT_NRESET));  
+       
+        Print_Registers(46);     
      
 }  
         

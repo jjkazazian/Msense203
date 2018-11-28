@@ -149,7 +149,7 @@ void Next_action(void) {
 
 /**
  *  Turns the given mux on if it exists; otherwise does nothing.
- *  \param mux  Number of the D0,1,2,3Fsync to turn on.
+ *  \param mux  Number of the D0,1,2,3, Fsync to turn on.
  *  \return 1 if the pin has been turned on; 0 otherwise.
  */
 
@@ -167,6 +167,15 @@ void IO_clear(uint32_t pinnb)
 {
  PIO_Clear(&mux_pins[pinnb]);      
 }
+
+
+bool IO_get_sync(void)
+{
+ uint32_t c;
+ c = (PIOA->PIO_PDSR & PIO_PDSR_P10) >> 10;
+ if (c==0) return false; else return true;
+}
+
 static void Memory_Config_TCM(MAILBOX *pmb){
  /* 384kbyte   = 96000 words of 32 bits*/
 

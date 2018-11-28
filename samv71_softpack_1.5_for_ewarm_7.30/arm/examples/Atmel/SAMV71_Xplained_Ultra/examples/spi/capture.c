@@ -8,12 +8,169 @@
 #include "capture.h"
 #include "pc_dma.h"
 #include "dsp_sense.h"
+#include "clock.h"
 /*----------------------------------------------------------------------------
  *        Local variables
  *----------------------------------------------------------------------------*/
 extern MAILBOX *mb;    
 
-struct _UNPACK up;
+struct _UNPACK up;  // probably no more used
+
+/*----------------------------------------------------------------------------
+ *        new jjk
+ *----------------------------------------------------------------------------*/
+void Print_Buffer(int32_t * buf) {
+  // print of output buffer
+  uint32_t j;
+        for (j = 0; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
+        printf(" %d \n\r" ,buf[j]);
+        }
+}
+
+void Unpack_64b_bs0(uint32_t *in) { 
+// for runtime measurement
+ 
+  mb->to_bs[0] = 0;
+  mb->to_bs[0] =  
+                  (in[mb->count]  & B2_msk) << 5
+                | (in[mb->count]  & B2_msk) << 4
+                | (in[mb->count]  & B2_msk) << 3
+                | (in[mb->count]  & B2_msk) << 2
+                | (in[mb->count]  & B2_msk) << 1
+                | (in[mb->count]  & B2_msk)  
+                | (in[mb->count]  & B1_msk)  
+                | (in[mb->count]  & B0_msk);
+  /*
+printf("  in= %x  B2=%x B1=%x B0=%x  bs=%d \r\n"
+      ,  in[mb->count]
+      ,  in[mb->count]  & B2_msk 
+      ,  in[mb->count]  & B1_msk  
+      ,  in[mb->count]  & B0_msk
+      ,  mb->to_bs[0]
+);
+*/
+
+}
+void Enable_Capture(void) {
+ /* enable pio capture*/
+    PIOA->PIO_PCMR |= PIO_PCMR_PCEN;
+ 
+}
+
+void Disable_Capture(void) {
+    /* disable pio capture*/
+    PIOA->PIO_PCMR &= ~((uint32_t)PIO_PCMR_PCEN);
+}
+
+void Reset(void) {
+        mb->count = 0;        // counting of sample Numbers 
+        mb->dmacall = true;   // DMA interupt rise when false
+        mb->repeat  = true;   // repeat the io and dma loop
+}
+
+ void PIO_Generation(void) {
+     // first acquisition before looping
+	while (mb->repeat) { 
+     // PIO signal generation
+        DSP();
+        BS_2_IO(); 
+ 
+            // printf(" %d   %x     ", mb->buffer_switch, mb->Pab); 
+            // printf(" %d     ", mb->to_bs[0]);
+            // printf(" %d \n\r" ,mb->BS0);
+           
+         // Next_action();     // State Machine next action to do  
+         
+        if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
+        }
+        // wait for end of DMA callback, next buffer available   
+        while(mb->dmacall); 
+        mb -> buffer_switch = !mb-> buffer_switch;
+        Reset(); 
+}
+
+ void PIO_DMA_firstbuffer(void) { 
+     // first acquisition before looping
+     // wait for end of DMA callback, next buffer available   
+        while(mb->dmacall); 
+        mb -> buffer_switch = !mb-> buffer_switch;
+        Reset(); 
+}
+
+
+void PIO_synchro_polling(void) {
+  uint32_t j;
+  mb->synchro = false;
+      while(!mb->synchro) { 
+            mb->sync = IO_get_sync();
+            if (mb->presync==false && mb->sync==true) {
+                 Enable_Capture();
+                 mb->synchro=true;
+            }
+            mb->presync = mb->sync;
+      }         
+}
+
+
+void PIO_Capture_DMA(void) {
+/* initialize PIO DMA mode and buffer pointer*/ 
+  DMA_Buffer_cfg(mb->A, mb->B, ND);
+  DMA_PIO_cfg();
+  DMA_Start();
+  DMA_Enable();
+}
+
+/** initialize PIO parallel capture function*/
+void Capture_Config(Pio *pio)
+{
+    /* enable periphral clock*/
+    PMC_EnablePeripheral(ID_PIOA);
+
+    /* disable pio capture*/
+    pio->PIO_PCMR &= ~((uint32_t)PIO_PCMR_PCEN);
+
+      /* interrupt*/
+        PIOA->PIO_IER |= PIO_IER_P10; // synchro pin
+        pio->PIO_PCIER |= PIO_PCIER_DRDY;
+    //  pio->PIO_PCIDR |= PIO_PCIDR_ALL;
+  
+    /* 8bit width*/
+    pio->PIO_PCMR |= PIO_PCMR_DSIZE_BYTE;
+
+    /* always sampling on clock*/
+    pio->PIO_PCMR |= PIO_PCMR_ALWYS;
+    
+    Enable_Capture(); 
+}
+/*----------------------------------------------------------------------------*/
+
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /** Global DMA driver for all transfer */
 static sXdmad dmad;
@@ -145,78 +302,23 @@ void Unpack_bs0(uint32_t *in) {
        
 }
 
-void Unpack_64b_bs0(uint32_t *in) { 
-// for runtime measurement
- 
-  mb->to_bs[0] = 0;
-  mb->to_bs[0] =  
-                  (in[mb->count]  & B2_msk) << 5
-                | (in[mb->count]  & B2_msk) << 4
-                | (in[mb->count]  & B2_msk) << 3
-                | (in[mb->count]  & B2_msk) << 2
-                | (in[mb->count]  & B2_msk) << 1
-                | (in[mb->count]  & B2_msk)  
-                | (in[mb->count]  & B1_msk)  
-                | (in[mb->count]  & B0_msk);
-  /*
-printf("  in= %x  B2=%x B1=%x B0=%x  bs=%d \r\n"
-      ,  in[mb->count]
-      ,  in[mb->count]  & B2_msk 
-      ,  in[mb->count]  & B1_msk  
-      ,  in[mb->count]  & B0_msk
-      ,  mb->to_bs[0]
-);
-*/
-
-}
 
 
+/*
 void PIO_Capture_DMA(bool switch_buffer) {
-    /* initialize PIO DMA mode*/ 
+  
   
  /// if (switch_buffer) _pc_dmaTransfer(mb->B); else _pc_dmaTransfer(mb->A);
- 
-  DMA_Buffer_cfg(mb->A, mb->B, ND);
-  DMA_PIO_cfg();
-  DMA_Start();
+
   
 }
-
-void Enable_Capture(void) {
- /* enable pio capture*/
-    PIOA->PIO_PCMR |= PIO_PCMR_PCEN;
- 
-}
-
-void Disable_Capture(void) {
-    /* disable pio capture*/
-    PIOA->PIO_PCMR &= ~((uint32_t)PIO_PCMR_PCEN);
-}
+*/
 
 
 
 
-/** initialize PIO parallel capture function*/
-void Capture_Config(Pio *pio)
-{
-    /* enable periphral clock*/
-    PMC_EnablePeripheral(ID_PIOA);
 
-    /* disable pio capture*/
-    pio->PIO_PCMR &= ~((uint32_t)PIO_PCMR_PCEN);
 
-      /* disable all interrupt*/
-    //pio->PIO_PCIER |= PIO_PCIER_DRDY;
-      pio->PIO_PCIDR |= PIO_PCIDR_ALL;
-  
-    /* 8bit width*/
-    pio->PIO_PCMR |= PIO_PCMR_DSIZE_BYTE;
-
-    /* always sampling on clock*/
-    pio->PIO_PCMR |= PIO_PCMR_ALWYS;
-    
-    
-    Enable_Capture(); 
 
 /*    
  data is stored in PIO_PCRHR and the flag DRDY is set to one in PIO_PCISR.
@@ -227,10 +329,6 @@ If this data size is larger than 8 bits, then the Parallel Capture mode samples 
 concatenated data of size defined by DSIZE. Then this data is stored in PIO_PCRHR and the flag DRDY is set to
 one in PIO_PCISR.
 */
-}
-
-
-
 /** \endcond */
 /* ---------------------------------------------------------------------------- */
 /*                  Microchip Microcontroller Software Support                  */

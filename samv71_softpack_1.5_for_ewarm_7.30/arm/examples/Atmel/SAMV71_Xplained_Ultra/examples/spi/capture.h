@@ -22,15 +22,23 @@ struct _UNPACK  {
       bool     status; // no error 
     
   } __attribute__((packed)) ;
-
-   
+      
+      
+      
+      
+void Print_Buffer(int32_t * buf);
+void Reset(void);
+void PIO_Generation(void);  
 void Capture_Config(Pio *pio);
-bool Unpack(uint32_t *in);
-void Unpack_bs0(uint32_t *in);
 void Unpack_64b_bs0(uint32_t *in);
-void PIO_Capture_DMA(bool buffer);
+void PIO_Capture_DMA(void);
 void Enable_Capture(void);
 void Disable_Capture(void);
+void PIO_synchro_polling(void);
+void PIO_DMA_firstbuffer(void);
+   
+bool Unpack(uint32_t *in);
+void Unpack_bs0(uint32_t *in);
 void _pc_dmaTransfer(uint32_t *Pbuffer);
 
 
