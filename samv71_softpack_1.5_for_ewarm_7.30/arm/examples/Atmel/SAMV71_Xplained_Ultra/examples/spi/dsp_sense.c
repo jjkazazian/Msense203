@@ -105,6 +105,37 @@ cic3.id = 3;
 cic4.id = 4;
 }
 
+
+void Average(int32_t * buf)
+{
+  uint32_t j;
+  uint32_t i;
+mb->cic_avg = 0;
+for (j = 3; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
+  mb->cic_avg = mb->cic_avg + buf[j];
+  i++;
+  }
+  mb->cic_avg = mb->cic_avg/i;
+printf(I"Average = %f"R, mb->cic_avg);
+}
+
+void Stdev(int32_t * buf)
+{
+  uint32_t j;
+  uint32_t i;
+  double rms;
+mb->cic_rms = 0;
+for (j = 3; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
+  mb->cic_rms = mb->cic_rms + buf[j]*buf[j];
+  i++;
+  }
+  rms = (double) mb->cic_rms/i;
+  mb->cic_rms = (float) sqrt(rms);
+printf(I"Deviation Standard = %f"R, mb->cic_rms);
+}
+
+
+
 void Sinus_Gen(void) 
 {// not used anymore
   uint32_t i; 
@@ -189,15 +220,15 @@ static bool Decimate(struct _CIC *cic)  {
               cic->flag_osr = false;
               switch (cic->id) {
               case 0:
-                mb->CIC0 = cic->xout;
+                mb->CIC[0] = cic->xout;
               case 1:  
-                mb->CIC1 = cic->xout;
+                mb->CIC[1] = cic->xout;
               case 2:  
-                mb->CIC2 = cic->xout;
+                mb->CIC[2] = cic->xout;
               case 3:  
-                mb->CIC3 = cic->xout;
+                mb->CIC[3] = cic->xout;
               case 4:  
-                mb->CIC4 = cic->xout;
+                mb->CIC[4] = cic->xout;
               }
               return true;
           } else return false;
@@ -263,10 +294,10 @@ void DSP(void)
           if (nsinus == N-1) nsinus=0; else nsinus++;
           
           mod0.xin = sin;
-          mod1.xin = 0;
-          mod2.xin = 0;
-          mod3.xin = 0;
-          mod4.xin = 0;
+          mod1.xin = sin;
+          mod2.xin = sin;
+          mod3.xin = sin;
+          mod4.xin = sin;
        
           Modulator(&mod0);
           Modulator(&mod1);

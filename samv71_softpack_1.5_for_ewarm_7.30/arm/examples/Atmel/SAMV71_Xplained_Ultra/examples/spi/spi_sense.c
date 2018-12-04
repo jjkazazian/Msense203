@@ -33,7 +33,7 @@ are valid.
 
  uint8_t secu = 0xA0|0x01;
 
-
+extern MAILBOX *mb; 
 volatile uint16_t registers[128];  // image of the Msense registers 
 struct _SPI spibox; 
 
@@ -155,8 +155,7 @@ static void Sense_Write( uint8_t addr, volatile  uint8_t Data)
         spibox.spi->SPI_TDR = data | SPI_PCS(spibox.cs);   // Write address+data
         while ((spibox.spi->SPI_SR & SPI_SR_TDRE) == 0);
         
-  
-        printf(I"WRITE sense register [ addr/data ]=0x%02x\n\r",  data);	
+        printf(I"WRITE sense register 0x[addr][data] = 0x%02x"R,data);	
         
 }
 
@@ -166,21 +165,21 @@ static void Analog_Config(void)
         Sense_Write(Addr(ANA_CTRL), 0x0);
          // write new config
         Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONLDO);
-        Wait(1);
+        Wait(10);
+        Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONBIAS );
+        Wait(10);
         Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONREF);
-        Wait(1);
-        Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONBIAS);
-        Wait(1); 
+        Wait(10); 
         
 }
 
-static void Set_Channels(void)
+void Set_Channels(void)
 {
-        Sense_Write(Addr(SDI0),  ONADC | GAIN_ADC_GAINX1 | SDI0_TEMPMEAS);
-        Sense_Write(Addr(SDI1),  0 | GAIN_ADC_GAINX1);
-        Sense_Write(Addr(SDV1),  0 );
-        Sense_Write(Addr(SDI2),  0 | GAIN_ADC_GAINX1);
-        Sense_Write(Addr(SDV2),  0 );
+        Sense_Write(Addr(SDI0),  mb->Ena_bs0 | GAIN_ADC_GAINX1 | SDI0_TEMPMEAS);
+        Sense_Write(Addr(SDI1),  mb->Ena_bs1 | GAIN_ADC_GAINX1);
+        Sense_Write(Addr(SDV1),  mb->Ena_bs2 );
+        Sense_Write(Addr(SDI2),  mb->Ena_bs3 | GAIN_ADC_GAINX1);
+        Sense_Write(Addr(SDV2),  mb->Ena_bs4 );
 }
 
 void Sense_Reset_at(uint32_t r)
@@ -218,8 +217,7 @@ void  Sense_Dump_param(void){
         Sense_Read(Addr(SDI1));
         Sense_Read(Addr(SDV1));
         Sense_Read(Addr(SDI2));
-        Sense_Read(Addr(SDV2));  
-        Sense_Read(Addr(SOFT_NRESET));  
+        Sense_Read(Addr(SDV2));   
        
         Print_Registers(46);     
      

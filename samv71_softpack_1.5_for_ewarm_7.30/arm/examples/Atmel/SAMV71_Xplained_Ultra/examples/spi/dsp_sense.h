@@ -35,14 +35,14 @@ struct _CIC  {
     int32_t zder2;              // derivative 2 delay memory
     int32_t zder3;              // derivative 3 delay memory   
     bool flag_osr;              // true = CIC data ready       
-
-    
   } __attribute__((packed)) ;    
 
 
 void Sinus_Gen(void);
 void DSP_Config(void);
 void DSP(void);
+void Average(int32_t * buf);
+void Stdev(int32_t * buf);
 
 
 bool CIC(uint32_t id, int32_t bs); 

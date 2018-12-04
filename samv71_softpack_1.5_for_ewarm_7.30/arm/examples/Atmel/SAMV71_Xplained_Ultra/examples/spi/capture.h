@@ -23,20 +23,30 @@ struct _UNPACK  {
     
   } __attribute__((packed)) ;
       
-      
+
       
       
 void Print_Buffer(int32_t * buf);
 void Reset(void);
 void PIO_Generation(void);  
 void Capture_Config(Pio *pio);
-void Unpack_64b_bs0(uint32_t *in);
+void Unpack_word_bs0(uint32_t *in);
+void Unpack_word_bs1(uint32_t *in);
+void Unpack_word_bs2(uint32_t *in);
+void Unpack_word_bs3(uint32_t *in);
+void Unpack_word_bs4(uint32_t *in);
 void PIO_Capture_DMA(void);
 void Enable_Capture(void);
 void Disable_Capture(void);
 void PIO_synchro_polling(void);
 void PIO_DMA_firstbuffer(void);
-   
+void Capture_console(void);
+void Capture_01(void);
+void Capture_console_Print(void);
+void Capture_console_Init(void);
+void View(uint32_t n, uint32_t k);
+void Print_Buffer_bin(int32_t * buf);
+
 bool Unpack(uint32_t *in);
 void Unpack_bs0(uint32_t *in);
 void _pc_dmaTransfer(uint32_t *Pbuffer);

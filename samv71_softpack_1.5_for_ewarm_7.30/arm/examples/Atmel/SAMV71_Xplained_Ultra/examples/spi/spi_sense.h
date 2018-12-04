@@ -26,6 +26,7 @@ struct _SPI {
 void  Sense_Config(void);
 void  Sense_Dump_param(void);
 void Sense_Reset_at(uint32_t r);
+void Set_Channels(void);
 
 
 #endif /* ! _SPI_SENSE_H */

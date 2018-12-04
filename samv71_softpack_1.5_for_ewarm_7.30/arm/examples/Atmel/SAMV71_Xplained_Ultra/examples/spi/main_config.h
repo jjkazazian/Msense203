@@ -7,8 +7,9 @@
 
 #define I "<I> "
 #define E "<E> "
+#define R "\n\r"
 
-#define GENERATE     // Generate sinus and bitstream on muxed IO
+#define AUTOTEST     // Generate sinus and bitstream on muxed IO
 #define BUFFOUT      // Store in an output buffer otherwise continuously sampling
 
 
@@ -21,8 +22,15 @@
 #define SAMPLES_NUMBER   CIC_NUMBER*CICOSR   // numbers of signal Word samples of bitstream 
 #define ND               SAMPLES_NUMBER*4    // numbers of byte acquisitions for the DMA
 
-#define ASTACK 0x204000a0  // stack base address
-#define SSTACK 0x1000      // stack size
+/** type of measurement */
+typedef enum _MEAS {
+	meas_T ,
+	meas_I1,
+	meas_V1,
+	meas_I2,
+	meas_V2,
+} measure;
+
 //#define ENABLE_TCM //  made in IAR preprocessing
 #define FFT_DEMO   //  floating point unit
 
@@ -34,32 +42,53 @@ typedef struct   {
     volatile int8_t BS2;
     volatile int8_t BS3;
     volatile int8_t BS4;
-    
+  /*  to remove
     volatile int32_t CIC0;
     volatile int32_t CIC1;
     volatile int32_t CIC2;
     volatile int32_t CIC3;
     volatile int32_t CIC4;
-    
+*/    
+    volatile int32_t CIC[5];
     volatile uint8_t to_demux[4];
     volatile int8_t  to_bs[5];
     
     /** DMA PIO receive buffers*/
      uint32_t A[SAMPLES_NUMBER]; 
      uint32_t B[SAMPLES_NUMBER];
+     
     // Signal output buffer 
      int32_t CIC_C[CIC_NUMBER*BUFFER_NUMBER];
+     float cic_avg;
+     float cic_rms;
+     float cic_snr;
   
-    
+   // Console
+       bool Ena_bs0;  
+       bool Ena_bs1;  
+       bool Ena_bs2;  
+       bool Ena_bs3;  
+       bool Ena_bs4; 
+       bool Ena_cic; 
+       uint32_t View_bs;  
+       uint32_t pos;
+       uint32_t kos;
+       
+       uint8_t key;
+       uint8_t prekey;
+       bool console;     
+     
+     
   // main loop and DMA control
   //  uint32_t idx;     // DSP decimation counter not used
     bool dmacall;       // dma interupt and callback done
     bool repeat;        // enable the signal generation
     uint32_t count;     // nb of samples counter
-    bool buffer_switch;     // DMA switch 0 buffer A to 1 buffer B 
+    measure meas ;      // type of measurement
+    bool buffer_switch; // DMA switch 0 buffer A to 1 buffer B 
     bool synchro;       // PIO synchro detected
-    bool presync;        // PIO synchro previous instant value
-    bool sync;           // PIO synchro instant value
+    bool presync;       // PIO synchro previous instant value
+    bool sync;          // PIO synchro instant value
     uint32_t *Pab;      // pointer to buffer A or B
     
     // State machine
@@ -106,6 +135,7 @@ void IO_ctrl(uint32_t pinnb, bool level);
 void IO_set(uint32_t pinnb);
 void IO_clear(uint32_t pinnb);
 bool IO_get_sync(void);
+uint32_t local_GetChar(void);
 
 void Print_int8_to_bin(uint8_t k);
 void waitKey(void);

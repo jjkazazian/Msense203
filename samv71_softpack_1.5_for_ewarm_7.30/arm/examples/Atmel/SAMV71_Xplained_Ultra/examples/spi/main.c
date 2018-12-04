@@ -39,11 +39,12 @@ uint32_t k;
  *        Exported functions
  *----------------------------------------------------------------------------*/
 
-  extern int main (void)  
+ extern int main (void)  
 { 
         uint32_t buff_nb_count = 0;
         bool mainloop_repeat = true;
         uint32_t j;
+        
  
      // mb = (MAILBOX *)malloc( sizeof(MAILBOX));  no used, changed to DTCM     
      // IO_ctrl(6,1);  
@@ -55,54 +56,58 @@ uint32_t k;
         Init_state();
         Capture_Config(PIOA);
         Disable_Capture(); // Enable_Capture();  when the sync is detected
-        
- 
+        Capture_console_Init();
+        Set_Channels();        
         Sense_Dump_param(); // SPI com and read registers
+        PIO_Capture_DMA(); // DMA configuration
+        /*
         IO_ctrl(6,0);  
         mb->buffer_switch = false;
         if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B;  
           
         printf(I"START polling Fsync  \n\r");
-        PIO_Capture_DMA(); // DMA configuration
         
         Reset();
+        */
         
-        waitKey(); 
-IO_ctrl(6,1);
-        PIO_synchro_polling();      
+Console: 
+        waitKey(); // space bar  to continue or 'c' for console
+        Capture_console();  
+        Capture_01();  
+goto Console;
+
+
+
+
+        PIO_synchro_polling(); // enable capture at sync detection     
          
         
        // PIO_Generation(); // Fill the first buffer 
-       PIO_DMA_firstbuffer();
-IO_ctrl(6,0);       
+       PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
+     
 doitagain:
   mainloop_repeat = true;
 
-  while (mainloop_repeat) {
+  while (mainloop_repeat) { // switch between buffer
 
         buff_nb_count++;   
 
         //PIO_Capture_DMA(mb -> buffer_switch);  // 0 for A, 1 for B
         if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
-IO_ctrl(6,1);
-	while (mb->repeat) { 
+
+	while (mb->repeat) { // buffer loop
      // PIO signal generation and buffer A or B filling
            
           k++;
          // DSP();
-        //  BS_2_IO();
+         // BS_2_IO();
    
-          Unpack_64b_bs0(mb->Pab); 
-      
-            // printf(" %d   %x     ", mb->buffer_switch, mb->Pab); 
-            // printf(" %d   \n\r  ", mb->to_bs[1]);
-            // printf(" %d \n\r" ,mb->BS0);
-                
-        
-             if (CIC(0, mb->to_bs[0])) { 
+          Unpack_word_bs1(mb->Pab); 
+             
+             if (CIC(1, mb->to_bs[1])) { 
                j=k/CICOSR-1;
                #ifdef BUFFOUT 
-                      mb->CIC_C[j] = mb->CIC0;
+                      mb->CIC_C[j] = mb->CIC[1];
                #endif
              }
              
@@ -111,25 +116,26 @@ IO_ctrl(6,1);
              
         }
         
-  IO_ctrl(6,0);           
+      
         // wait for end of DMA callback, next buffer available   
         while(mb->dmacall);   
         Reset();
         mb -> buffer_switch = !mb-> buffer_switch;
 
          if ( buff_nb_count == BUFFER_NUMBER) {
-              mainloop_repeat = false;
+           Disable_Capture();   
+           mainloop_repeat = false;
               buff_nb_count = 0; 
               #ifdef BUFFOUT 
-                     printf(I"STOP  \n\r");
                      Print_Buffer(mb->CIC_C);
+                     printf(I"STOP  \n\r");
               #endif
          }
          
   }
 
   #ifdef BUFFOUT 
-        if (doit == 0) { // choose the bumber of doit to do by increasing the 0
+        if (doit == 0) { // choose the number of doit to do by increasing the 0
           printf(I"End of Program:  number of samples= %d \r\n", k/CICOSR); 
           while (1); 
         } else doit++;

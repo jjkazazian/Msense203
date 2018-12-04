@@ -9,16 +9,26 @@
 #include "pc_dma.h"
 #include "dsp_sense.h"
 #include "clock.h"
+#include "spi_sense.h"
 /*----------------------------------------------------------------------------
  *        Local variables
  *----------------------------------------------------------------------------*/
 extern MAILBOX *mb;    
 
-struct _UNPACK up;  // probably no more used
+struct _UNPACK up;     // probably no more used
+
 
 /*----------------------------------------------------------------------------
  *        new jjk
  *----------------------------------------------------------------------------*/
+static void Print_Buffer_hex(int32_t * buf) {
+  // print of output buffer
+  uint32_t j;
+        for (j = 0; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
+        printf(" %x \n\r" ,buf[j]);
+        }
+}
+
 void Print_Buffer(int32_t * buf) {
   // print of output buffer
   uint32_t j;
@@ -27,30 +37,58 @@ void Print_Buffer(int32_t * buf) {
         }
 }
 
-void Unpack_64b_bs0(uint32_t *in) { 
-// for runtime measurement
- 
-  mb->to_bs[0] = 0;
-  mb->to_bs[0] =  
-                  (in[mb->count]  & B2_msk) << 5
-                | (in[mb->count]  & B2_msk) << 4
-                | (in[mb->count]  & B2_msk) << 3
-                | (in[mb->count]  & B2_msk) << 2
-                | (in[mb->count]  & B2_msk) << 1
-                | (in[mb->count]  & B2_msk)  
-                | (in[mb->count]  & B1_msk)  
-                | (in[mb->count]  & B0_msk);
-  /*
-printf("  in= %x  B2=%x B1=%x B0=%x  bs=%d \r\n"
-      ,  in[mb->count]
-      ,  in[mb->count]  & B2_msk 
-      ,  in[mb->count]  & B1_msk  
-      ,  in[mb->count]  & B0_msk
-      ,  mb->to_bs[0]
-);
-*/
-
+void Print_Buffer_bin(int32_t * buf) {
+  // print of output buffer
+  uint32_t j;
+  uint32_t i;
+  int8_t bs_data;
+  
+        for (j = 0; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
+          for (i = 0; i < 10; i++) { 
+                bs_data = ((buf[j] >> i*3) & 0x7u)<<5;
+                bs_data = bs_data >>5;
+                printf(" %d"R ,bs_data);
+                bs_data = 0;
+          }
+        }
 }
+
+
+void Unpack_word_bs0(uint32_t *in) { 
+// for runtime measurement
+   mb->to_bs[0] = 0;
+   mb->to_bs[0] =  in[mb->count] << 5;
+   mb->to_bs[0] =  mb->to_bs[0]  >> 5;
+}
+
+void Unpack_word_bs1( uint32_t *in) { 
+  
+  mb->to_bs[1] = 0;
+  mb->to_bs[1] =  (in[mb->count] & 0x1u << 3)  << 2 | (in[mb->count] & 0x3u << 8) >> 2;
+  mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+}
+
+void Unpack_word_bs2( uint32_t *in) { 
+  
+  mb->to_bs[2] = 0;
+  mb->to_bs[2] =  (in[mb->count] & 0x3u << 10)  >> 10-5 | (in[mb->count] & 0x1u << 16) >> 14-5;
+  mb->to_bs[2] =  mb->to_bs[2]  >> 5;
+}
+
+void Unpack_word_bs3( uint32_t *in) { 
+  
+  mb->to_bs[3] = 0;
+  mb->to_bs[3] =  (in[mb->count] & 0x7u << 17)  >> 12;
+  mb->to_bs[3] =  mb->to_bs[3]  >> 5;
+}
+
+void Unpack_word_bs4( uint32_t *in) { 
+  mb->to_bs[4] = 0;
+  mb->to_bs[4] =  in[mb->count] >> (24-5);
+  mb->to_bs[4] =  mb->to_bs[4]  >> 5;
+}
+
+
 void Enable_Capture(void) {
  /* enable pio capture*/
     PIOA->PIO_PCMR |= PIO_PCMR_PCEN;
@@ -97,7 +135,16 @@ void Reset(void) {
         Reset(); 
 }
 
-
+static void Reset_buffout(void)
+{
+ uint32_t i;  
+ mb->kos = 0;
+ mb->pos = 0; 
+  for (i = 0; i < CIC_NUMBER*BUFFER_NUMBER; i++) {
+    mb->CIC_C[i] = 0;
+    
+  }
+}
 void PIO_synchro_polling(void) {
   uint32_t j;
   mb->synchro = false;
@@ -141,6 +188,360 @@ void Capture_Config(Pio *pio)
     pio->PIO_PCMR |= PIO_PCMR_ALWYS;
     
     Enable_Capture(); 
+}
+
+static void bs_to_bin32(void) {
+ int8_t bsin;
+   // reset the buffer before 
+   // pos is the bitstream position in the 32 bits 0 to 9
+   // n is the bitstream number
+   // kos is the buffer sample index
+  
+ #ifdef BUFFOUT
+bsin =  mb->to_bs[mb->View_bs];
+
+  if (mb->kos < CIC_NUMBER*BUFFER_NUMBER) {
+  
+               mb->CIC_C[mb->kos] |= (bsin & 0x7u) << mb->pos*3;
+               if (mb->pos == 9) {mb->pos=0; mb->kos++;} else mb->pos++;
+         
+       }
+#endif
+}
+
+static void BS_to_bin(void) {
+
+ switch (mb->View_bs) {
+                                case 0:
+                                     Unpack_word_bs0(mb->Pab); 
+                                     bs_to_bin32();
+                                    break;
+                                case 1:
+                                     Unpack_word_bs1(mb->Pab); 
+                                     bs_to_bin32();
+                                      break;
+                                case 2:
+                                     Unpack_word_bs2(mb->Pab); 
+                                     bs_to_bin32();
+                                    break;
+                                case 3:
+                                     Unpack_word_bs3(mb->Pab); 
+                                     bs_to_bin32();
+                                    break;
+                                case 4:
+                                     Unpack_word_bs4(mb->Pab); 
+                                     bs_to_bin32();
+                                    break;
+                          } 
+}
+
+
+/** run capture in condition 01*/
+void Capture_01(void)
+{
+  uint32_t buff_count = 0;
+  bool     buff_repeat = true;
+  uint32_t k;  
+  uint32_t j; 
+  
+  mb->buffer_switch = false;
+  if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B;  
+          
+  printf(I"START polling Fsync"R);    
+  Reset();
+  Reset_buffout();
+    
+
+
+#ifdef AUTOTEST
+      Enable_Capture(); 
+      PIO_Generation(); // Fill the first buffer 
+#else
+      PIO_synchro_polling(); // enable capture at sync detection  
+      PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
+  
+#endif
+  
+  
+  buff_repeat = true;
+  while (buff_repeat) { // switching between buffer
+
+        buff_count++;   
+        if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
+
+     // start buffer loop A B ////////////////////////////////////////
+        while (mb->repeat) { 
+           k++;
+#ifdef AUTOTEST
+           DSP();
+           BS_2_IO();
+#endif          
+          if (mb->Ena_cic) View(mb->View_bs,k); else BS_to_bin();
+          if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
+        }
+      // stop buffer loop A B ////////////////////////////////////////
+        
+        
+     // wait for end of DMA callback, next buffer available   
+        while(mb->dmacall){ mb->key = local_GetChar();}   
+        Reset();
+        mb -> buffer_switch = !mb-> buffer_switch;
+
+      // End of buffering
+         if ( buff_count == BUFFER_NUMBER) {
+                     //Disable_Capture();   
+                     buff_repeat = false;
+                     buff_count = 0; 
+              #ifdef BUFFOUT 
+                     if (mb->Ena_cic) Print_Buffer(mb->CIC_C); else Print_Buffer_bin(mb->CIC_C);
+                     Average(mb->CIC_C);
+                     Stdev(mb->CIC_C);
+                     printf(I"STOP  \n\r");
+              #endif
+         }
+         
+  }
+ 
+}
+
+void Capture_console_Init(void)
+{
+  mb->console = false;
+  mb->Ena_bs0 = false;
+  mb->Ena_bs1 = false; 
+  mb->Ena_bs2 = false;
+  mb->Ena_bs3 = false;
+  mb->Ena_bs4 = false;
+  mb->View_bs =  0;
+}
+
+void Capture_console_Print(void)
+{
+    // bits attribution, Change on posedge
+    // Sigma delta order MSB to LSB
+    // BS4,  BS3,  BS2,  BS1,  BS0    
+    // SDV2, SDI2, SDV1, SDI1, SD0  
+printf(R); 
+printf(I"BS0=SD0=I0, BS1=I1, BS2=V1 BS3=I2, BS4=V2"R);  
+if (mb->Ena_bs0 == false) printf(I"BS0/I0 Disabled\r\n"); else printf(I"BS0/I0 Enabled\r\n");
+if (mb->Ena_bs1 == false) printf(I"BS1/I1 Disabled\r\n"); else printf(I"BS1/I1 Enabled\r\n");
+if (mb->Ena_bs2 == false) printf(I"BS2/V1 Disabled\r\n"); else printf(I"BS2/V1 Enabled\r\n");
+if (mb->Ena_bs3 == false) printf(I"BS3/I2 Disabled\r\n"); else printf(I"BS3/I2 Enabled\r\n");
+if (mb->Ena_bs4 == false) printf(I"BS4/V2 Disabled\r\n"); else printf(I"BS4/V2 Enabled\r\n");
+printf(I"View BS %d"R, mb->View_bs);
+}
+
+static void cic_compute(uint32_t n, uint32_t k) {
+   uint32_t j;
+   // n is the bitstream number
+   // k is the bitstream sample index
+   // j decimated sample index
+   
+       if (CIC(n, mb->to_bs[n])) { 
+         j=k/CICOSR-1;
+         #ifdef BUFFOUT 
+                mb->CIC_C[j] = mb->CIC[n];
+         #endif
+       }
+}
+
+
+
+
+
+
+void View(uint32_t n, uint32_t k) {
+
+ switch (n) {
+                                case 0:
+                                     Unpack_word_bs0(mb->Pab); 
+                                     cic_compute(n,k);
+                                    break;
+                                case 1:
+                                     Unpack_word_bs1(mb->Pab); 
+                                     cic_compute(n,k);
+                                      break;
+                                case 2:
+                                     Unpack_word_bs2(mb->Pab); 
+                                     cic_compute(n,k);
+                                    break;
+                                case 3:
+                                     Unpack_word_bs3(mb->Pab); 
+                                     cic_compute(n,k);
+                                    break;
+                                case 4:
+                                     Unpack_word_bs4(mb->Pab); 
+                                     cic_compute(n,k);
+                                    break;
+                          } 
+}
+
+
+static void Switch_Enable(void) {
+ switch (mb->key) {
+                                case '0':
+                                    mb->Ena_bs0 = true;     printf(R"Enable BS 0"R);
+                                    mb->prekey =' '; 
+                                    mb->key =' ';
+                                    break;         
+                                case '1': 
+                                    mb->Ena_bs1 = true;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Enable BS 1"R);
+                                    break;
+                                case '2':
+                                    mb->Ena_bs2 = true;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Enable BS 2"R); 
+                                    break;
+                                case '3':
+                                    mb->Ena_bs3 = true;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Enable BS 3"R);
+                                    break;
+                                case '4':
+                                    mb->Ena_bs4 = true;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Enable BS 4"R);
+                                    break;
+                          }
+
+}
+
+static void Switch_View(void) {
+ switch (mb->key) {
+                                case '0':
+                                    mb->View_bs = 0;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"View BS 0"R);
+                                    break;
+                                case '1':
+                                    mb->View_bs = 1;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"View BS 1"R);
+                                    break;
+                                case '2':
+                                    mb->View_bs = 2;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"View BS 2"R); 
+                                    break;
+                                case '3':
+                                    mb->View_bs = 3;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"View BS 3"R); 
+                                    break;
+                                case '4':
+                                    mb->View_bs = 4;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"View BS 4"R); 
+                                    break;
+                          } 
+
+}
+
+static void Switch_Disable(void) {
+ switch (mb->key) {
+                                case '0':
+                                    mb->Ena_bs0 = false;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Disable BS 0"R);
+                                    break;
+                                case '1':
+                                    mb->Ena_bs1 = false;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Disable BS 1"R);
+                                    break;
+                                case '2':
+                                    mb->Ena_bs2 = false;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Disable BS 2"R); 
+                                    break;
+                                case '3':
+                                    mb->Ena_bs3 = false;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Disable BS 3"R); 
+                                    break;
+                                case '4':
+                                    mb->Ena_bs4 = false;
+                                    mb->key =' ';
+                                    mb->prekey =' ';        printf(R"Disable BS 4"R); 
+                                    break;
+                          } 
+
+}
+
+void Capture_console(void)
+{
+  // ² enter Console
+  // s stop console
+  // e enable ADC + bs number
+  // d disable ADC  + bs number
+  // v view bitstream  + bs number
+  // i info
+  // c to activate the CIC filter
+  // b to see the bitstream
+  
+  
+ 
+  
+  if (mb->key == '²') {
+              printf(I"Start Console"R);
+              mb->key == ' ';
+              mb->console =  true;
+              while(mb->console) {
+                    mb->key = DBG_GetChar();
+                    DBG_PutChar(mb->key);
+                    
+                    switch (mb->key) {
+                    case 's': 
+                        mb->console = false; printf(R);
+                        mb->key =' ';
+                        break;
+                    case 'e':
+                        mb->prekey ='e';
+                        mb->key =' ';
+                        break;
+                    case 'd':
+                        mb->prekey ='d'; 
+                        mb->key =' ';
+                        break;
+                    case 'v':
+                        mb->prekey ='v'; 
+                        mb->key =' ';
+                        break;
+                    case 'i':
+                        Capture_console_Print();
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break;                        
+                    case 'c':
+                        mb->Ena_cic = true; printf("Enable CIC filter osr=64"R);
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break;  
+                    case 'b':
+                        mb->Ena_cic = false; printf("Disable CIC and print bitstream "R);
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break;       
+                    }
+                    
+                    
+                    switch (mb->prekey) { 
+                     case 'e':
+                         Switch_Enable();
+                         break;
+                     case 'd':
+                         Switch_Disable();
+                         break;
+                     case 'v':
+                         Switch_View();
+                         break;
+                    }
+              }
+         printf(I"Stop Console"R);
+         Set_Channels();
+  }
 }
 /*----------------------------------------------------------------------------*/
 

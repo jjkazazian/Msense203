@@ -22,12 +22,27 @@ extern const Pin capture_pins[]   = PINS_capture;
  *----------------------------------------------------------------------------*/
 void waitKey(void)
 {
-	printf("\n\r-I- Press any key to Continue...\n\r");
-	while (1) {
-		if (DBG_GetChar()!= 0)
-			break;
-	}
+	printf(I"Press spacebar to Continue... or ² for console"R);
+        
+   while (1) {
+          mb->key = DBG_GetChar();
+          
+          if (mb->key== '²') {
+            mb->console = true;                  
+            break;
+          } 
+          if (mb->key== ' ') {                 
+            break;
+	  }
+   }
 }
+
+uint32_t local_GetChar(void)
+{
+	if ((USART1->US_CSR & US_CSR_RXRDY) != 0)  return USART1->US_RHR;
+}
+
+
 static unsigned int_to_int(unsigned k) {
     if (k == 0) return 0;
     if (k == 1) return 1;                       /* optional */
