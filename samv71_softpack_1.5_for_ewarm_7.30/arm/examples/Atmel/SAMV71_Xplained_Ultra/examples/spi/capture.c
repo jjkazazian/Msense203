@@ -63,23 +63,40 @@ void Unpack_word_bs0(uint32_t *in) {
 
 void Unpack_word_bs1( uint32_t *in) { 
   
+#ifdef  BOARD_SAMV71_DVB
+  mb->to_bs[1] = 0;
+  mb->to_bs[1] =  (in[mb->count] & 0x1u << 7) >> 2| (in[mb->count] & 0x3u << 8) >> 2;
+  mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+#else
   mb->to_bs[1] = 0;
   mb->to_bs[1] =  (in[mb->count] & 0x1u << 3)  << 2 | (in[mb->count] & 0x3u << 8) >> 2;
   mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+#endif   
+ 
 }
 
 void Unpack_word_bs2( uint32_t *in) { 
-  
+#ifdef  BOARD_SAMV71_DVB
+  mb->to_bs[2] = 0;
+  mb->to_bs[2] =  (in[mb->count] & 0x1u << 15)  >> 9 | (in[mb->count] & 0x1u << 10)  >> 10-5 | (in[mb->count] & 0x1u << 16) >> 14-5;
+  mb->to_bs[2] =  mb->to_bs[2]  >> 5;
+#else  
   mb->to_bs[2] = 0;
   mb->to_bs[2] =  (in[mb->count] & 0x3u << 10)  >> 10-5 | (in[mb->count] & 0x1u << 16) >> 14-5;
   mb->to_bs[2] =  mb->to_bs[2]  >> 5;
+#endif  
 }
 
 void Unpack_word_bs3( uint32_t *in) { 
-  
+#ifdef  BOARD_SAMV71_DVB
+  mb->to_bs[3] = 0;
+  mb->to_bs[3] =  (in[mb->count] & 0x1u << 23)  >> 16 | (in[mb->count] & 0x3u << 17)  >> 12;
+  mb->to_bs[3] =  mb->to_bs[3]  >> 5;
+#else    
   mb->to_bs[3] = 0;
   mb->to_bs[3] =  (in[mb->count] & 0x7u << 17)  >> 12;
   mb->to_bs[3] =  mb->to_bs[3]  >> 5;
+#endif    
 }
 
 void Unpack_word_bs4( uint32_t *in) { 
@@ -92,7 +109,6 @@ void Unpack_word_bs4( uint32_t *in) {
 void Enable_Capture(void) {
  /* enable pio capture*/
     PIOA->PIO_PCMR |= PIO_PCMR_PCEN;
- 
 }
 
 void Disable_Capture(void) {
@@ -145,22 +161,56 @@ static void Reset_buffout(void)
     
   }
 }
-void PIO_synchro_polling(void) {
-  uint32_t j;
+
+void PIO_synchro_polling_DVB(void) {
   mb->synchro = false;
+  mb->presync = true;
+      while(!mb->synchro) {   
+      mb->synchro = IO_get_sync() & !IO_get_clk() ;
+      }
+      Enable_Capture();
+}
+
+
+void PIO_synchro_polling_onrise(void) {
+  mb->synchro = false;
+  mb->presync = true;
       while(!mb->synchro) { 
             mb->sync = IO_get_sync();
             if (mb->presync==false && mb->sync==true) {
                  Enable_Capture();
+                  //IO_ctrl(0,1);  
+                  //IO_ctrl(0,0); 
                  mb->synchro=true;
             }
             mb->presync = mb->sync;
       }         
 }
 
+void PIO_synchro_polling_onfall(void) {
+  mb->synchro = false;
+  mb->presync = false;
+      while(!mb->synchro) { 
+            mb->sync = IO_get_sync();
+            if (mb->presync==true && mb->sync==false) {
+                 Enable_Capture();
+                  //IO_ctrl(0,1);  
+                 // IO_ctrl(0,0); 
+                 mb->synchro=true;
+            }
+            mb->presync = mb->sync;
+      }         
+}
+
+void PIO_synchro_ignore(void) {
+  mb->synchro = true;
+  Enable_Capture();      
+}
+
 
 void PIO_Capture_DMA(void) {
 /* initialize PIO DMA mode and buffer pointer*/ 
+  mb->DMA_switch = false;
   DMA_Buffer_cfg(mb->A, mb->B, ND);
   DMA_PIO_cfg();
   DMA_Start();
@@ -177,7 +227,7 @@ void Capture_Config(Pio *pio)
     pio->PIO_PCMR &= ~((uint32_t)PIO_PCMR_PCEN);
 
       /* interrupt*/
-        PIOA->PIO_IER |= PIO_IER_P10; // synchro pin
+        PIOA->PIO_IER |= PIO_IER_P10; // synchro pin tbc not used
         pio->PIO_PCIER |= PIO_PCIER_DRDY;
     //  pio->PIO_PCIDR |= PIO_PCIDR_ALL;
   
@@ -210,7 +260,6 @@ bsin =  mb->to_bs[mb->View_bs];
 }
 
 static void BS_to_bin(void) {
-
  switch (mb->View_bs) {
                                 case 0:
                                      Unpack_word_bs0(mb->Pab); 
@@ -235,8 +284,116 @@ static void BS_to_bin(void) {
                           } 
 }
 
+static uint32_t * Read_Data_301(void)
+{
+  uint8_t reg2316=0;
+  uint8_t reg1508=0;
+  uint8_t reg0700=0;
+  uint32_t data[3];
+  
+    if (mb->Ena_bs0) {  
+            reg2316 = Sense_Read(Addr(ADCI0_23_16)); 
+            reg1508 = Sense_Read(Addr(ADCI0_15_8)); 
+            reg0700 = Sense_Read(Addr(ADCI0_7_0)); 
+    }
+    if (mb->View_bs==0) {
+            data[2] = reg2316;
+            data[1] = reg1508;
+            data[0] = reg0700;
+    }
+    if (mb->Ena_bs1) {  
+            reg2316 = Sense_Read(Addr(ADCI1_23_16)); 
+            reg1508 = Sense_Read(Addr(ADCI1_15_8)); 
+            reg0700 = Sense_Read(Addr(ADCI1_7_0)); 
+    }
+    if (mb->View_bs==1) {
+            data[2] = reg2316;
+            data[1] = reg1508;
+            data[0] = reg0700;
+    }
+    if (mb->Ena_bs2) {  
+             reg2316 = Sense_Read(Addr(ADCV1_23_16)); 
+             reg1508 = Sense_Read(Addr(ADCV1_15_8)); 
+             reg0700 = Sense_Read(Addr(ADCV1_7_0)); 
+    }
+    if (mb->View_bs==2) {
+             data[2] = reg2316;
+             data[1] = reg1508;
+             data[0] = reg0700;
+    }
+    if (mb->Ena_bs3) {  
+             reg2316 = Sense_Read(Addr(ADCI2_23_16)); 
+             reg1508 = Sense_Read(Addr(ADCI2_15_8)); 
+             reg0700 = Sense_Read(Addr(ADCI2_7_0)); 
+    }
+    if (mb->View_bs==3) {
+             data[2] = reg2316;
+             data[1] = reg1508;
+             data[0] = reg0700;
+    }
+    if (mb->Ena_bs4) {  
+             reg2316 = Sense_Read(Addr(ADCV2_23_16)); 
+             reg1508 = Sense_Read(Addr(ADCV2_15_8)); 
+             reg0700 = Sense_Read(Addr(ADCV2_7_0)); 
+    }
+    if (mb->View_bs==4) {
+             data[2] = reg2316;
+             data[1] = reg1508;
+             data[0] = reg0700;
+    }
+    return data;
+}
 
-/** run capture in condition 01*/
+/** run capture sense 301  on I1*/
+void Capture_301(void)
+{
+  
+  uint32_t j; 
+  uint32_t adc_ready;
+  bool  capture;
+  uint32_t * ptr;
+  
+  capture = true;
+  j = 0;  //  sample index
+
+     IO_ctrl(6,1);  
+     IO_ctrl(6,0);  
+  while (capture){
+  
+  adc_ready = (uint32_t) Sense_Read(Addr(ITSR)) & (0x7u);  
+  if ((adc_ready & (0x1u << 2)) >> 2 == 1) {
+    if ((adc_ready & (0x1u << 1))>> 1 == 1) printf(I"Under sampling"R);
+    if (adc_ready & 0x1u  == 1) printf(I"Over sampling"R);
+      
+      IO_ctrl(6,1);  
+      ptr = Read_Data_301();
+      IO_ctrl(6,0); 
+      
+ #ifdef BUFFOUT 
+  mb->CIC_C[j] = 0;  
+  mb->CIC_C[j] = (*(ptr+2) << 24) | (*(ptr+1) << 16) | (*ptr << 8);
+  mb->CIC_C[j] = mb->CIC_C[j] >> 8;
+ #endif
+  
+  if (j==CIC_NUMBER*BUFFER_NUMBER-1) capture= false; else j++;
+  
+  }
+  
+  }
+     IO_ctrl(6,1);  
+     IO_ctrl(6,0); 
+ #ifdef BUFFOUT 
+       Print_Buffer(mb->CIC_C);
+       Average(mb->CIC_C); 
+       Stdev(mb->CIC_C);
+       SNR();
+       printf(I"STOP"R);
+ #endif
+  
+  
+  
+}
+/** run capture sense 203  in condition 01*/
 void Capture_01(void)
 {
   uint32_t buff_count = 0;
@@ -251,25 +408,23 @@ void Capture_01(void)
   Reset();
   Reset_buffout();
     
-
-
 #ifdef AUTOTEST
       Enable_Capture(); 
       PIO_Generation(); // Fill the first buffer 
 #else
-      PIO_synchro_polling(); // enable capture at sync detection  
+      PIO_synchro_polling_onfall(); // enable capture at sync detection  
       PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
-  
 #endif
-  
+
   
   buff_repeat = true;
   while (buff_repeat) { // switching between buffer
-
+ //IO_ctrl(6,1);  
+     
         buff_count++;   
         if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
 
-     // start buffer loop A B ////////////////////////////////////////
+     // start buffer loop A or B ////////////////////////////////////////
         while (mb->repeat) { 
            k++;
 #ifdef AUTOTEST
@@ -279,30 +434,90 @@ void Capture_01(void)
           if (mb->Ena_cic) View(mb->View_bs,k); else BS_to_bin();
           if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
         }
-      // stop buffer loop A B ////////////////////////////////////////
+      // stop buffer loop A or B ////////////////////////////////////////
         
         
-     // wait for end of DMA callback, next buffer available   
-        while(mb->dmacall){ mb->key = local_GetChar();}   
+     // wait for end of DMA callback, next buffer available  
+        while(mb->dmacall){  }   
         Reset();
         mb -> buffer_switch = !mb-> buffer_switch;
 
       // End of buffering
          if ( buff_count == BUFFER_NUMBER) {
-                     //Disable_Capture();   
+                     Disable_Capture();   
                      buff_repeat = false;
                      buff_count = 0; 
               #ifdef BUFFOUT 
                      if (mb->Ena_cic) Print_Buffer(mb->CIC_C); else Print_Buffer_bin(mb->CIC_C);
-                     Average(mb->CIC_C);
-                     Stdev(mb->CIC_C);
-                     printf(I"STOP  \n\r");
+                     if (mb->Ena_cic) Average(mb->CIC_C); else Average_bs(mb->CIC_C);
+                     if (mb->Ena_cic) Stdev(mb->CIC_C); // else Stdev_bs(mb->CIC_C);
+                     if (mb->Ena_cic) SNR();
+                     printf(I"STOP"R);
               #endif
          }
          
   }
  
 }
+
+/** run capture sense 203  in condition 02*/
+void Capture_02(void)
+{
+  uint32_t buff_count;
+  bool     buff_repeat;
+  uint32_t k;  
+  uint32_t j; 
+  
+          
+  printf(I"START polling Fsync"R);    
+  Reset();         // count=0, dmacall=true, repeat=true
+  buff_count = 0;
+  buff_repeat = true;
+  Reset_buffout(); // reset dma buffer
+  reset_cic();     // reset filters
+  
+       PIO_synchro_polling_DVB();
+      //PIO_synchro_polling_onfall();   // enable capture at sync detection for 1 MHz clock 
+      //PIO_synchro_polling_onrise(); // enable capture at sync detection for 4 MHz clock 
+      //PIO_synchro_ignore();
+      PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
+
+  while (buff_repeat) { // switching between buffer A,B,A,B
+
+                  buff_count++;   
+                  if (mb->DMA_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
+
+ // start buffer loop A or B           ////////////////////////////////////////
+                  while (mb->repeat) { 
+                    k++;
+                    if (mb->Ena_cic) View(mb->View_bs,k); else BS_to_bin();
+                    if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
+                  }
+// stop buffer loop A or B            ////////////////////////////////////////
+                  
+                  
+               // wait for end of DMA callback, next buffer available  
+                  while(mb->dmacall){  }   
+                  Reset();
+
+
+                // End of buffering
+                   if ( buff_count == BUFFER_NUMBER) {
+                               buff_repeat = false;
+                               buff_count = 0; 
+                               Disable_Capture();   // allow DVB UART to rework
+                        #ifdef BUFFOUT 
+                               if (mb->Ena_cic) Print_Buffer(mb->CIC_C); else Print_Buffer_bin(mb->CIC_C);
+                               if (mb->Ena_cic) Average(mb->CIC_C);      else Average_bs(mb->CIC_C);
+                               if (mb->Ena_cic) Stdev(mb->CIC_C);     // else Stdev_bs(mb->CIC_C);
+                               if (mb->Ena_cic) SNR();
+                               printf(I"STOP"R);
+                        #endif
+                   }
+  }
+ 
+}
+
 
 void Capture_console_Init(void)
 {
@@ -323,12 +538,14 @@ void Capture_console_Print(void)
     // SDV2, SDI2, SDV1, SDI1, SD0  
 printf(R); 
 printf(I"BS0=SD0=I0, BS1=I1, BS2=V1 BS3=I2, BS4=V2"R);  
-if (mb->Ena_bs0 == false) printf(I"BS0/I0 Disabled\r\n"); else printf(I"BS0/I0 Enabled\r\n");
-if (mb->Ena_bs1 == false) printf(I"BS1/I1 Disabled\r\n"); else printf(I"BS1/I1 Enabled\r\n");
-if (mb->Ena_bs2 == false) printf(I"BS2/V1 Disabled\r\n"); else printf(I"BS2/V1 Enabled\r\n");
-if (mb->Ena_bs3 == false) printf(I"BS3/I2 Disabled\r\n"); else printf(I"BS3/I2 Enabled\r\n");
-if (mb->Ena_bs4 == false) printf(I"BS4/V2 Disabled\r\n"); else printf(I"BS4/V2 Enabled\r\n");
+if (mb->Ena_bs0 == false) printf(I"BS0 / I0 Disabled"R); else printf(I"BS0 / I0 Enabled"R);
+if (mb->Ena_bs1 == false) printf(I"BS1 / I1 Disabled"R); else printf(I"BS1 / I1 Enabled"R);
+if (mb->Ena_bs2 == false) printf(I"BS2 / V1 Disabled"R); else printf(I"BS2 / V1 Enabled"R);
+if (mb->Ena_bs3 == false) printf(I"BS3 / I2 Disabled"R); else printf(I"BS3 / I2 Enabled"R);
+if (mb->Ena_bs4 == false) printf(I"BS4 / V2 Disabled"R); else printf(I"BS4 / V2 Enabled"R);
 printf(I"View BS %d"R, mb->View_bs);
+if (mb->Ena_sin == false) printf(I"Autotest signal is zero"R); else printf(I"Autotest signal is sinus"R);
+if (mb->Ena_cic == false) printf(I"Output is  a bitstream"R);  else printf(I"Output is the CIC filter out"R);
 }
 
 static void cic_compute(uint32_t n, uint32_t k) {
@@ -344,10 +561,6 @@ static void cic_compute(uint32_t n, uint32_t k) {
          #endif
        }
 }
-
-
-
-
 
 
 void View(uint32_t n, uint32_t k) {
@@ -470,6 +683,21 @@ static void Switch_Disable(void) {
 
 }
 
+static void menu(void){
+ printf(R"'spacebar'  Start the measurement"R); 
+ printf(R"'e'+ n      Enable  channel n=0 to 4"R);
+ printf(R"'d'+ n      Disable channel n=0 to 4"R);
+ printf(R"'v'+ n      View    channel n=0 to 4"R);
+ printf(R"'c'+ n      Enable CIC filter with osr=64"R);
+ printf(R"'b'+ n      Disable CIC and print the bitstream"R);
+ printf(R"'u'+ n      Dump sense parameters registers"R);
+ printf(R"'w'+ n      Dump sense data registers"R);
+ printf(R"'s'+ n      Autotest Signal = Sinus generator"R);
+ printf(R"'z'+ n      Autotest Signal = zero"R);
+ printf(R"'i'+ n      Information on the curent setting"R);
+ printf(R"'m'+ n      Print the menu"R);
+}
+
 void Capture_console(void)
 {
   // ² enter Console
@@ -480,6 +708,8 @@ void Capture_console(void)
   // i info
   // c to activate the CIC filter
   // b to see the bitstream
+  // u dump sense parameters registers
+  // w dump sense data registers
   
   
  
@@ -493,7 +723,7 @@ void Capture_console(void)
                     DBG_PutChar(mb->key);
                     
                     switch (mb->key) {
-                    case 's': 
+                    case ' ': 
                         mb->console = false; printf(R);
                         mb->key =' ';
                         break;
@@ -515,15 +745,42 @@ void Capture_console(void)
                         mb->key =' ';
                         break;                        
                     case 'c':
-                        mb->Ena_cic = true; printf("Enable CIC filter osr=64"R);
+                        mb->Ena_cic = true; printf(R"Enable CIC filter osr=64"R);
                         mb->prekey =' '; 
                         mb->key =' ';
                         break;  
                     case 'b':
-                        mb->Ena_cic = false; printf("Disable CIC and print bitstream "R);
+                        mb->Ena_cic = false; printf(R"Disable CIC and print bitstream "R);
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break;     
+                    case 'u':
+                        printf(R"Parameters"R);
+                        Sense_Dump_param(); 
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break; 
+                    case 'w':
+                        printf(R"Data"R);
+                        Sense_Dump_data(); 
                         mb->prekey =' '; 
                         mb->key =' ';
                         break;       
+                   case 's':
+                        mb->Ena_sin = true; printf(R"Signal Sinus generator "R);
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break; 
+                   case 'z':
+                        mb->Ena_sin = false; printf(R"Signal is zero "R);
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break; 
+                   case 'm':
+                        printf(R"MENU"R); menu();
+                        mb->prekey =' '; 
+                        mb->key =' ';
+                        break;
                     }
                     
                     

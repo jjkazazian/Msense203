@@ -53,8 +53,9 @@ static void p0_Callback(int dummy, void* pArg)
 	pArg = pArg;
         // to do !!!!!!!!!
         mb-> dmacall =  false;
-	// read in DMA if A or B can be processed and report in dmastatus
-        // if (read_dma_status==0) dmastatus=true; else dmastatus=false;
+        mb -> DMA_switch = !mb-> DMA_switch;
+	// read in DMA if A or B can be processed and report in DMA_switch
+        
 	}
 
 

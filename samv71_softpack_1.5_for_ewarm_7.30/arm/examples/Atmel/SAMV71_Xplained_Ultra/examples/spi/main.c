@@ -3,6 +3,15 @@
 // activate the speed optimization in the IAR compiler
 // jjk set to Dcache 0 for debug in samv71q21.h
 // #define __DCACHE_PRESENT 0   /**< SAMV71Q21 does provide a Data Cache   */ 
+// disable: /* Select XTAL 32k instead of internal slow RC 32k for slow clock */
+// in file system_samv71.c, slowclock set to internal RC32k
+// change __SAMV71Q21__ to __SAMV71N21__ in IAR preprocessing and option
+// change BOARD_SAMV71_XULT to BOARD_SAMV71_DVB in IAR preprocessing and option
+// new definitions NO_PIOC, NO_PIOE, NO_TC1
+// add _SAMV71_TC1_INSTANCE_ in samv71q21.h for Q21
+// add _SAMV71_PIOC_INSTANCE_ in samv71q21.h for Q21
+
+
 /*----------------------------------------------------------------------------
  *        Headers
  *----------------------------------------------------------------------------*/
@@ -58,9 +67,38 @@ uint32_t k;
         Disable_Capture(); // Enable_Capture();  when the sync is detected
         Capture_console_Init();
         Set_Channels();        
-        Sense_Dump_param(); // SPI com and read registers
+
         PIO_Capture_DMA(); // DMA configuration
+        Sense_Dump_param(); // SPI com and read registers
+        mb->synchro = false;
+        
+    #if defined(BOARD_SAMV71_XULT)
+	printf(I"board_v71_xult"R);
+    #endif
+        
         /*
+        while(1) {
+          
+        IO_ctrl(0,1);  
+         for (j = 0; j < 16; j++) __asm("nop");
+        IO_ctrl(0,0);  
+         for (j = 0; j < 16; j++) __asm("nop");
+        
+        }
+        */
+Console: 
+        IO_ctrl(0,0);  
+        waitKey(); // space bar  to continue or '²' for console
+        Capture_console(); 
+        //Capture_301();
+        //Capture_01(); 
+        Capture_02();  
+goto Console;
+
+}
+
+
+       /*
         IO_ctrl(6,0);  
         mb->buffer_switch = false;
         if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B;  
@@ -69,17 +107,10 @@ uint32_t k;
         
         Reset();
         */
-        
-Console: 
-        waitKey(); // space bar  to continue or 'c' for console
-        Capture_console();  
-        Capture_01();  
-goto Console;
 
 
-
-
-        PIO_synchro_polling(); // enable capture at sync detection     
+/*
+        PIO_synchro_polling_onrise(); // enable capture at sync detection     
          
         
        // PIO_Generation(); // Fill the first buffer 
@@ -145,6 +176,9 @@ doitagain:
   printf(I"End of Program \r\n");
   while (1);
 }
+
+
+*/
 /** \endcond */
 /* ---------------------------------------------------------------------------- */
 /*                  Microchip Microcontroller Software Support                  */

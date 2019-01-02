@@ -60,7 +60,7 @@ struct _DEMUX demx;
       mx.Fsync[3] = true;
   
     } 
- 
+ /*
   int8_t decodeBS(bool *code ) {
     //  2 = 010
     //  1 = 001
@@ -79,9 +79,9 @@ struct _DEMUX demx;
    if (code[2]==1 && code[1]==0 && code[0]==1) return 99;
    else return 99;
    }
+  */
   
-  
-  
+  /*
    void demxcode(void) {
      
              
@@ -119,7 +119,9 @@ struct _DEMUX demx;
       mb->to_bs[4] = decodeBS(demx.SDV2);
  
     } 
- 
+
+*/
+ /*
  void demxcode_bs0(void) {   
    // for runtime measurement
     //SD0 bit stream BS0   
@@ -131,7 +133,7 @@ struct _DEMUX demx;
       mb->to_bs[0] = decodeBS(demx.SD0);
     } 
   
-  
+  */
   
  static void Drive_IO(void) {
      uint32_t i; 

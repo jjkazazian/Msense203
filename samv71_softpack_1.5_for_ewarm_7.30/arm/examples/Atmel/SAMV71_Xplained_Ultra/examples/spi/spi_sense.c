@@ -45,9 +45,13 @@ struct _SPI spibox;
 
 static void choose_SPI(void) 
 {
-            spibox.cs      = SPI0_CS3; // 3
-            spibox.id      = ID_SPI0;  // 21
-            spibox.spi     = SPI0;     // ((Spi    *)0x40008000U)           
+#ifdef  BOARD_SAMV71_DVB
+   spibox.cs      = SPI0_CS0; // jjk change to 0 for dvb
+#else
+   spibox.cs      = SPI0_CS3;
+#endif   
+   spibox.id      = ID_SPI0;  // 21
+   spibox.spi     = SPI0;     // ((Spi    *)0x40008000U)           
 }
 
 static void Init_SPI(void) 
@@ -55,17 +59,27 @@ static void Init_SPI(void)
      /** SPI Clock setting (Hz) */
     static uint32_t spiClock;
 
-    /** SPI clock configuration */
-    static const uint32_t clockConfigurations[3] = { 8000000, 2000000, 4000000};
+    /** SPI clock configuration {1Mhz, 4MHz, 8MHz}*/
+    static const uint32_t clockConfigurations[3] = { 8000000, 4000000, 1000000};
 
         /** Pins to configure for the application. */
+   
+#ifdef  BOARD_SAMV71_DVB
         static const Pin spi_pins[] = {
                 PIN_SPI_MISO,
                 PIN_SPI_MOSI,
                 PIN_SPI_SPCK,
-                PIN_SPI_NPCS3
+                PIN_SPI_NPCS0 // jjk change to 0 for dvb
         };
-
+#else
+         static const Pin spi_pins[] = {
+                PIN_SPI_MISO,
+                PIN_SPI_MOSI,
+                PIN_SPI_SPCK,
+                PIN_SPI_NPCS3 
+        };
+#endif
+    
         choose_SPI();  
         
         spiClock = clockConfigurations[0];
@@ -89,9 +103,9 @@ static void Init_SPI(void)
          PIO_Configure(spi_pins, PIO_LISTSIZE(spi_pins)); 
 }
 
-static void Print_Registers(uint8_t n) {
+static void Print_Registers(uint8_t s, uint8_t n) { //s: start register, n number of register
   uint32_t i;
-  for (i = 0; i < n; i++) {
+  for (i = s; i < n; i++) {
               printf(I"Register [0x%x] = \t0x%04x ", i, registers [(uint8_t)i]);  
               Print_int8_to_bin((uint8_t)registers [(uint8_t)i]);
               printf("\n\r");
@@ -119,7 +133,7 @@ while (wait){
 return status;
 
 }
-static uint8_t Sense_Read(uint8_t addr)
+uint8_t Sense_Read(uint8_t addr)
 {// jjk
         uint16_t data;
         uint16_t wdata;
@@ -142,7 +156,29 @@ static uint8_t Sense_Read(uint8_t addr)
 
         return data;  
 }
+uint8_t Sense_Read_status(uint8_t addr)
+{// jjk
+        uint16_t data;
+        uint16_t wdata;
+        bool  wait;
+        bool  status;
+        uint32_t n=0;
+        
+        wait  = true;  
+        wdata = (addr|0x80)<< 8 | (0xff); // 1+addr+data
 
+  	while ((spibox.spi->SPI_SR & SPI_SR_TXEMPTY) == 0);	
+        //data = spibox.spi->SPI_RDR;   // to clear the RDRF bit
+        spibox.spi->SPI_TDR = wdata | SPI_PCS(spibox.cs); // write address
+        while ((spibox.spi->SPI_SR & SPI_SR_TDRE) == 0);   
+    
+        
+        if (check_RDRF(spibox.spi)) data = spibox.spi->SPI_RDR; // read data
+        registers[addr] = 0x0000;      // reset register cell
+        registers[addr] = (addr)<< 8 | (uint8_t)data; // 0+addr+data  
+
+        return data;  
+}
 
 
 static void Sense_Write( uint8_t addr, volatile  uint8_t Data)
@@ -170,6 +206,8 @@ static void Analog_Config(void)
         Wait(10);
         Sense_Write(Addr(ANA_CTRL), Sense_Read(Addr(ANA_CTRL)) | ANA_CTRL_ONREF);
         Wait(10); 
+        // OSR = 64;
+        Sense_Write(Addr(ATCFG), 0x3u);
         
 }
 
@@ -196,7 +234,13 @@ void  Sense_Config(void) {
         Init_SPI(); 
         // Soft reset
         spibox.addr  = Addr(SOFT_NRESET);
-        spibox.data  = 0x0f;
+        spibox.data  = 0x0f; // Reset released
+        Sense_Write(spibox.addr, spibox.data);
+        spibox.addr  = 0x3E; //Seckey mode
+        spibox.data  = 0xA1;
+        Sense_Write(spibox.addr, spibox.data);
+        spibox.addr  = 0x2B; // activate data ready bit cleared on reading
+        spibox.data  = 0x7;
         Sense_Write(spibox.addr, spibox.data);
 
         // Analog configuration , VDDANA, VREF, VBIAS
@@ -208,21 +252,37 @@ void  Sense_Config(void) {
 
 void  Sense_Dump_param(void){
   /* access to the sense registers */  
+       
 
-        Sense_Read(Addr(ADCV1_TAG)); 
-        Sense_Read(Addr(ADCV2_TAG));      
-        Sense_Read(Addr(ADCV3_TAG));          
+        Sense_Read(Addr(ITSR));
         Sense_Read(Addr(ANA_CTRL)); 
         Sense_Read(Addr(SDI0));
         Sense_Read(Addr(SDI1));
         Sense_Read(Addr(SDV1));
         Sense_Read(Addr(SDI2));
-        Sense_Read(Addr(SDV2));   
-       
-        Print_Registers(46);     
+        Sense_Read(Addr(SDV2)); 
+        Sense_Read(Addr(ATCFG));
+        Sense_Read(Addr(A2TSR));
+        Sense_Read(Addr(ITOUTCR));
+        Sense_Read(Addr(ITCR));
+
+        Sense_Read(Addr(SOFT_NRESET));
+
+        Print_Registers(0x20,0x3F);     
      
 }  
-        
+
+void  Sense_Dump_data(void){
+  /* access to the sense registers */  
+       
+        Sense_Read(Addr(ADCI1_TAG)); 
+        Sense_Read(Addr(ADCI1_23_16)); 
+        Sense_Read(Addr(ADCI1_15_8)); 
+        Sense_Read(Addr(ADCI1_7_0)); 
+
+        Print_Registers(0,0x1C);     
+     
+}
         
 /** \endcond */
 /* ---------------------------------------------------------------------------- */

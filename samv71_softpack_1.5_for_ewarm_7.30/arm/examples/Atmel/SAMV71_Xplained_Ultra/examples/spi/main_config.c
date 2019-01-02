@@ -10,11 +10,11 @@
  *        Local definitions
  *----------------------------------------------------------------------------*/
 static uint32_t dbg_baudrate = 115200;
-extern MAILBOX *mb; 
-//extern MAILBOX mbox; 
+extern MAILBOX *mb; //extern MAILBOX mbox; 
 
 //Pin for muxout
-extern const Pin mux_pins[]       = PINS_MUXout;
+
+extern const Pin mux_pins[]  = PINS_MUXout;
 extern const Pin capture_pins[]   = PINS_capture;
         
 /*----------------------------------------------------------------------------
@@ -36,12 +36,12 @@ void waitKey(void)
 	  }
    }
 }
-
+/*
 uint32_t local_GetChar(void)
 {
 	if ((USART1->US_CSR & US_CSR_RXRDY) != 0)  return USART1->US_RHR;
 }
-
+*/
 
 static unsigned int_to_int(unsigned k) {
     if (k == 0) return 0;
@@ -186,10 +186,30 @@ void IO_clear(uint32_t pinnb)
 
 bool IO_get_sync(void)
 {
- uint32_t c;
- c = (PIOA->PIO_PDSR & PIO_PDSR_P10) >> 10;
- if (c==0) return false; else return true;
+ //uint32_t c;
+ bool c;
+#ifdef  BOARD_SAMV71_DVB
+      c = (PIOA->PIO_PDSR & PIO_PDSR_P14) >> 14;
+#else
+      c = (PIOA->PIO_PDSR & PIO_PDSR_P10) >> 10;
+#endif 
+ //if (c==0) return false; else return true;
+ return c;
 }
+
+bool IO_get_clk(void)
+{ // for DBV only
+
+ bool c;
+#ifdef  BOARD_SAMV71_DVB
+      c = (PIOA->PIO_PDSR & PIO_PDSR_P21) >> 21;
+#else
+      c = false;
+#endif 
+ 
+ return c;
+}
+
 
 static void Memory_Config_TCM(MAILBOX *pmb){
  /* 384kbyte   = 96000 words of 32 bits*/
@@ -260,6 +280,12 @@ void Main_Config(void)
 	/* Disable watchdog */
 	WDT_Disable(WDT);
         
+        PIO_Configure(mux_pins, PIO_LISTSIZE(mux_pins)); 
+        printf("\n\r--- Pin config for muxout  --\n\r"); 
+        PIO_Configure(capture_pins, PIO_LISTSIZE(capture_pins));     
+        printf("\n\r--- Pin config for capture  --\n\r"); 
+            
+            
         /* DBG UART */
         DBG_Configure(dbg_baudrate, BOARD_MCK);
          
@@ -267,24 +293,40 @@ void Main_Config(void)
 	printf("\n\r--- SPI Example %s --\n\r", SOFTPACK_VERSION);
 	printf("--- %s\n\r", BOARD_NAME);
 	printf("--- Compiled: %s %s With %s--\n\r", __DATE__, __TIME__, COMPILER_NAME);
-        
-        // Pin for muxout
-        PIO_Configure(mux_pins, PIO_LISTSIZE(mux_pins)); 
-        // Pin for capture
-        PIO_Configure(capture_pins, PIO_LISTSIZE(capture_pins)); 
+
+#ifdef  BOARD_SAMV71_DVB
+        PIOA->PIO_PPDER |= PIO_PPDER_P3; 
+        PIOA->PIO_PPDER |= PIO_PPDER_P4;
+        PIOA->PIO_PPDER |= PIO_PPDER_P5;
+        PIOA->PIO_PPDER |= PIO_PPDER_P11;
+        PIOA->PIO_PPDER |= PIO_PPDER_P12; 
+        PIOA->PIO_PPDER |= PIO_PPDER_P13;
+        PIOA->PIO_PPDDR |= PIO_PPDDR_P14;
+#else
         PIOA->PIO_PPDDR |= PIO_PPDDR_P3; // board pullup
         PIOA->PIO_PPDDR |= PIO_PPDDR_P4; // board pullup
         PIOA->PIO_PPDER |= PIO_PPDER_P5;
-        PIOA->PIO_PPDER |= PIO_PPDER_P9;
-        PIOA->PIO_PPDER |= PIO_PPDER_P10;
+        PIOA->PIO_PPDER |= PIO_PPDER_P9; 
+        PIOA->PIO_PPDER |= PIO_PPDER_P10; 
+#endif 
         
-    //    Memory_Config_TCM(&mbox);
+ 
+        //PCK0 PPDDR, PPDER, PUER, PUDR
+        PIOB->PIO_PPDDR |= PIO_PPDDR_P13;
+        PIOB->PIO_PUDR  |= PIO_PUDR_P13;
+        
+       // PIOB->PIO_MDER  |= PIO_MDER_P12;
+        
         Memory_Config_TCM(mb);
         
         mb->count=0;
         printf("--- End of Memory configuration \n\r");
         
 }
+
+
+  //    Memory_Config_TCM(&mbox);
+
 /** \endcond */
 /* ---------------------------------------------------------------------------- */
 /*                  Microchip Microcontroller Software Support                  */

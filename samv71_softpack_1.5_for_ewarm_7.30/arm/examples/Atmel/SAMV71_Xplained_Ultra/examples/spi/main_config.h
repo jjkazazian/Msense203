@@ -5,11 +5,14 @@
 #include "mux.h"
 #include "capture.h"
 
+
+// #define BOARD_SAMV71_DVB in IAR setting overwise BOARD_SAMV71_XULT
+
 #define I "<I> "
 #define E "<E> "
 #define R "\n\r"
 
-#define AUTOTEST     // Generate sinus and bitstream on muxed IO
+//#define AUTOTEST     // Generate sinus and bitstream on muxed IO associate with BUFFOUT
 #define BUFFOUT      // Store in an output buffer otherwise continuously sampling
 
 
@@ -18,7 +21,7 @@
 
 #define BUFFER_NUMBER     4                  // numbers of buffers to acquire
 #define CICOSR           64                  // Comb filter decimation factor
-#define CIC_NUMBER       229                 // sample number ofter CIC filter
+#define CIC_NUMBER       229                 // sample number after CIC filter
 #define SAMPLES_NUMBER   CIC_NUMBER*CICOSR   // numbers of signal Word samples of bitstream 
 #define ND               SAMPLES_NUMBER*4    // numbers of byte acquisitions for the DMA
 
@@ -32,7 +35,7 @@ typedef enum _MEAS {
 } measure;
 
 //#define ENABLE_TCM //  made in IAR preprocessing
-#define FFT_DEMO   //  floating point unit
+#define FFT_DEMO     //  floating point unit activated
 
 COMPILER_PACK_SET(4)
 typedef struct   {
@@ -59,9 +62,9 @@ typedef struct   {
      
     // Signal output buffer 
      int32_t CIC_C[CIC_NUMBER*BUFFER_NUMBER];
-     float cic_avg;
-     float cic_rms;
-     float cic_snr;
+     double cic_avg;
+     double cic_rms;
+     double cic_snr;
   
    // Console
        bool Ena_bs0;  
@@ -70,6 +73,7 @@ typedef struct   {
        bool Ena_bs3;  
        bool Ena_bs4; 
        bool Ena_cic; 
+       bool Ena_sin; 
        uint32_t View_bs;  
        uint32_t pos;
        uint32_t kos;
@@ -86,6 +90,7 @@ typedef struct   {
     uint32_t count;     // nb of samples counter
     measure meas ;      // type of measurement
     bool buffer_switch; // DMA switch 0 buffer A to 1 buffer B 
+    bool DMA_switch;    // DMA switch 0 buffer A to 1 buffer B 
     bool synchro;       // PIO synchro detected
     bool presync;       // PIO synchro previous instant value
     bool sync;          // PIO synchro instant value
@@ -103,27 +108,40 @@ typedef struct   {
 COMPILER_PACK_RESET()
 
 
+/** List of all mux output definitions. */
+// mux out 
+#ifndef	BOARD_SAMV71_DVB
+        #define PIN_D0     {PIO_PD30, PIOD, ID_PIOD, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PIN_D1     {PIO_PA6,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PIN_D2     {PIO_PC19, PIOC, ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PIN_D3     {PIO_PA2,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PIN_Fsync  {PIO_PC13, PIOC, ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PIN_clkb   {PIO_PA19, PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PIN_6      {PIO_PB3,  PIOB, ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT}
 
+        #define PINS_MUXout  {PIN_D0,  PIN_D1,  PIN_D2,  PIN_D3,  PIN_Fsync, PIN_clkb, PIN_6}
+#else
+        #define PIN_6        {PIO_PA0,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
+        #define PINS_MUXout  {PIN_6}
+#endif
 
-#define PIN_D1     {PIO_PA6,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_D0     {PIO_PD30, PIOD, ID_PIOD, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_D2     {PIO_PC19, PIOC, ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_D3     {PIO_PA2,  PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_Fsync  {PIO_PC13, PIOC, ID_PIOC, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_clkb   {PIO_PA19, PIOA, ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PIN_6      {PIO_PB3,  PIOB, ID_PIOB, PIO_OUTPUT_0, PIO_DEFAULT}
-// // capture
+// capture
 #define PIN_CD0  {PIO_PA3,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
 #define PIN_CD1  {PIO_PA4,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
 #define PIN_CD2  {PIO_PA5,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
-#define PIN_CD3  {PIO_PA9,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
-#define PIN_CD4  {PIO_PA10, PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT} //Fsync
+
+#ifdef	BOARD_SAMV71_DVB
+         #define PIN_CD3  {PIO_PA13, PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
+         #define PIN_CD4  {PIO_PA12, PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT} //Fsync not connected
+#else
+         #define PIN_CD3  {PIO_PA9,  PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
+         #define PIN_CD4  {PIO_PA10, PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT} //Fsync
+#endif    
+
 #define PIN_pclk {PIO_PA22, PIOA, ID_PIOA, PIO_INPUT, PIO_DEFAULT}
 
-/** List of all mux output definitions. */
-#define PINS_MUXout  {PIN_D0,  PIN_D1,  PIN_D2,  PIN_D3,  PIN_Fsync, PIN_clkb, PIN_6}
 /** List of all PIO Capture */
-#define PINS_capture {PIN_CD0, PIN_CD1, PIN_CD2, PIN_CD3, PIN_CD4,   PIN_pclk}
+#define PINS_capture {PIN_CD0, PIN_CD1, PIN_CD2, PIN_CD3, PIN_CD4, PIN_pclk}
 
 double randone(void) ;
 void Init_state(void);
@@ -135,6 +153,7 @@ void IO_ctrl(uint32_t pinnb, bool level);
 void IO_set(uint32_t pinnb);
 void IO_clear(uint32_t pinnb);
 bool IO_get_sync(void);
+bool IO_get_clk(void);
 uint32_t local_GetChar(void);
 
 void Print_int8_to_bin(uint8_t k);

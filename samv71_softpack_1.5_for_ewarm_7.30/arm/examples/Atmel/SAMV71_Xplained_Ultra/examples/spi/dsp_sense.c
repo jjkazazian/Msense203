@@ -9,7 +9,7 @@
 /*----------------------------------------------------------------------------
  *        Local variables
  *----------------------------------------------------------------------------*/
-
+extern MAILBOX *mb;    
 float pi=3.1415926535897932384626433832795028841971693993751058209749445; // Pi
 
  uint32_t ii;
@@ -72,9 +72,9 @@ Tin = M/(float)fin;           // clock period MicroSecond
 T   = M/(float)BSCLOCK;       // clock period MicroSecond
 N   = (int)round(Tin/T);      // sinus Numbers of point
 fain = M/(N*T);               // actual input frequency
-printf ("sinus amplitude  = %d \r\n", amp );
-printf ("sinus nb of point  = %d \r\n", N );
-printf ("sinus frequency = %f \r\n", fain );
+printf (I"sinus amplitude    = %d "R, amp );
+printf (I"sinus nb of point  = %d "R, N );
+printf (I"sinus frequency    = %f "R, fain );
 }
 
 
@@ -86,10 +86,10 @@ gfb1  = FS*2.4/4;
 gfb2  = 2*gfb1;
 gff   = 2;
 
-printf ("lvl1  %d \r\n", lvl1 );
-printf ("lvl2  %d \r\n", lvl2 );
-printf ("gfb1  %d \r\n", (int32_t)gfb1 );
-printf ("gfb2  %d \r\n", (int32_t)gfb2 );
+printf (I"lvl1  %d"R, lvl1 );
+printf (I"lvl2  %d"R, lvl2 );
+printf (I"gfb1  %d"R, (int32_t)gfb1 );
+printf (I"gfb2  %d"R, (int32_t)gfb2 );
 }
 
 static void CIC_Config(void)
@@ -106,56 +106,125 @@ cic4.id = 4;
 }
 
 
+void SNR(void)
+{
+  double snr;
+  double amp;
+  double a=0.5;
+  double fsv=0.6;
+  double FS = pow(2,23);
+  double b;
+  amp = (a*FS/fsv)/sqrt(2); 
+  
+  switch (CICOSR) {
+    
+  case 8:
+    b=15;
+    break;
+  case 16:
+    b=12;
+    break;
+  case 32:
+    b=9;
+    break;
+  case 64:
+    b=6;
+    break;
+  }
+  
+  snr = 20*log10(amp/mb->cic_rms)+b;
+    //                             / 
+  printf(I"SNR Sinus 0.5V, BW=2kHz = %d dB"R, (int)snr);
+}
+
+
 void Average(int32_t * buf)
 {
   uint32_t j;
-  uint32_t i;
-mb->cic_avg = 0;
-for (j = 3; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
-  mb->cic_avg = mb->cic_avg + buf[j];
-  i++;
-  }
-  mb->cic_avg = mb->cic_avg/i;
-printf(I"Average = %f"R, mb->cic_avg);
+  double nb;
+  
+  mb->cic_avg = 0;
+  nb = CIC_NUMBER*BUFFER_NUMBER;
+
+for (j = 0; j < nb; j++) {mb->cic_avg = mb->cic_avg + buf[j];}
+  mb->cic_avg = mb->cic_avg/nb;
+  printf(I"Average                 = %lf"R, mb->cic_avg);
 }
+
+
+void Average_bs(int32_t * buf)
+{
+  uint32_t j;
+  uint32_t i;
+  double nb;
+  int8_t bs_data;
+  
+  mb->cic_avg = 0;
+  nb = CIC_NUMBER*BUFFER_NUMBER;
+  
+        for (j = 0; j < nb; j++) {
+          for (i = 0; i < 10; i++) { 
+                bs_data = ((buf[j] >> i*3) & 0x7u)<<5;
+                bs_data = bs_data >> 5;
+                mb->cic_avg = mb->cic_avg + bs_data;
+                bs_data = 0;
+          }
+        }
+  mb->cic_avg = mb->cic_avg/nb;
+  printf(I"Average             = %lf"R, mb->cic_avg);
+}
+
 
 void Stdev(int32_t * buf)
 {
   uint32_t j;
-  uint32_t i;
+  double nb;
   double rms;
-mb->cic_rms = 0;
-for (j = 3; j < CIC_NUMBER*BUFFER_NUMBER; j++) {
-  mb->cic_rms = mb->cic_rms + buf[j]*buf[j];
-  i++;
-  }
-  rms = (double) mb->cic_rms/i;
-  mb->cic_rms = (float) sqrt(rms);
-printf(I"Deviation Standard = %f"R, mb->cic_rms);
-}
-
-
-
-void Sinus_Gen(void) 
-{// not used anymore
-  uint32_t i; 
-  float s;  
   
-  for (i = 0; i < N; i++) {
-  s = amp*sin(i*T*2*pi*fain/M);
-
-  }
-
+  mb->cic_rms = 0;
+  nb= CIC_NUMBER*BUFFER_NUMBER;
+  
+for (j = 0; j < nb; j++) {mb->cic_rms = mb->cic_rms + (buf[j]-mb->cic_avg)*(buf[j]-mb->cic_avg);}
+  rms =  mb->cic_rms/nb;
+  mb->cic_rms = sqrt(rms);
+printf(I"Deviation Standard      = %lf"R, mb->cic_rms);
 }
+
+void Stdev_bs(int32_t * buf)
+{
+  uint32_t i;
+  uint32_t j;
+  double nb;
+  double rms;
+  int8_t bs_data;
+  
+  mb->cic_rms = 0;
+  nb= CIC_NUMBER*BUFFER_NUMBER;
+  
+for (j = 0; j < nb; j++) {
+
+for (i = 0; i < 10; i++) { 
+                bs_data = ((buf[j] >> i*3) & 0x7u)<<5;
+                bs_data = bs_data >>5;
+                mb->cic_rms = mb->cic_rms + (bs_data-mb->cic_avg)*(bs_data-mb->cic_avg);
+                bs_data = 0;
+          }
+}
+
+  rms =  mb->cic_rms/nb;
+  mb->cic_rms = sqrt(rms);
+printf(I"Deviation Standard      = %lf"R, mb->cic_rms);
+}
+
+
+
 
 
 
 static int32_t Sinus(uint32_t index) 
 {
   double s;
-  
   s = randone()+8*amp*sin((double)(index*T*2*pi*fain/M));
-
   return (int)round(s/8);
 }
 
@@ -164,13 +233,11 @@ static int32_t Mod_Comp(int32_t in)
 {
   // comparator
   int32_t bs;
-
     if ((in > -lvl1) && (in < lvl1))    bs = 0;    
     if ((in >= lvl1) && (in < lvl2))    bs = 1;
     if ((in >= lvl2))                   bs = 2;      
     if ((in <= -lvl1) && (in > -lvl2))  bs = -1;
-    if ((in <= -lvl2))                  bs = -2;
-    
+    if ((in <= -lvl2))                  bs = -2; 
 return bs;
 }
 
@@ -188,7 +255,6 @@ static int32_t Combfilter(int32_t bs, struct _CIC * cic)
   cic->osr++;
   
 // integrator
-
 cic->int3 = cic->int3 + cic->int2;
 cic->int2 = cic->int2 + cic->int1;
 cic->int1 = cic->int1 + bs;
@@ -208,11 +274,36 @@ cic->int1 = cic->int1 + bs;
               cic->zder2   = cic->der2;
               cic->zder3   = cic->der3;   
 
-              cic->xout = CICScal_sirag*cic->xout; 
+              cic->xout = CICScal_sirag * cic->xout; 
               return cic->xout;
     }   
 }
 
+static void reset_combfilter(struct _CIC * cic)
+{
+    cic->int3  = 0;
+    cic->int2  = 0;
+    cic->int1  = 0;
+    cic->zder1 = 0;
+    cic->der1  = 0;
+    cic->zder2 = 0;
+    cic->der2  = 0;
+    cic->zder3 = 0;
+    cic->der3  = 0; 
+    cic->xout  = 0;
+
+}
+
+void reset_cic(void)
+
+{
+  reset_combfilter(&cic0);
+  reset_combfilter(&cic1);
+  reset_combfilter(&cic2);
+  reset_combfilter(&cic3);
+  reset_combfilter(&cic4);
+
+}
 
 static bool Decimate(struct _CIC *cic)  {
 
@@ -286,38 +377,46 @@ nsinus = 0;
 
 void DSP(void)
 {
-         int32_t sin;
-        
-         
-          sin = Sinus(nsinus);
+          int32_t sin;
+          if (mb->Ena_sin) sin = Sinus(nsinus); else sin=(int)randone();
 
           if (nsinus == N-1) nsinus=0; else nsinus++;
           
-          mod0.xin = sin;
-          mod1.xin = sin;
-          mod2.xin = sin;
-          mod3.xin = sin;
-          mod4.xin = sin;
-       
-          Modulator(&mod0);
-          Modulator(&mod1);
-          Modulator(&mod2);
-          Modulator(&mod3);
-          Modulator(&mod4);   
-          
+          if (mb->Ena_bs0) {mod0.xin = sin; Modulator(&mod0);} else mod0.bs=0;
+          if (mb->Ena_bs1) {mod1.xin = sin; Modulator(&mod1);} else mod1.bs=0;
+          if (mb->Ena_bs2) {mod2.xin = sin; Modulator(&mod2);} else mod2.bs=0;
+          if (mb->Ena_bs3) {mod3.xin = sin; Modulator(&mod3);} else mod3.bs=0;
+          if (mb->Ena_bs4) {mod4.xin = sin; Modulator(&mod4);} else mod4.bs=0;
+
           BS2mb();
+         
+          
+          
+          
+  }
+
+
            // Check 
 /*          if (ii < 65536){
             ii++;
             printf(" %d \n\r" , mod0.bs);
            //if (CIC(2, mod2.bs)) { printf(" %d \n\r" ,mb->CIC2); } 
           }
-*/          
-          
-          
-          
+*/ 
+
+/*
+void Sinus_Gen(void) 
+{// not used anymore
+  uint32_t i; 
+  float s;  
+  
+  for (i = 0; i < N; i++) {
+  s = amp*sin(i*T*2*pi*fain/M);
+
   }
 
+}
+*/
 
 
 /** \endcond */

@@ -9,7 +9,13 @@
  *        Local variables
  *----------------------------------------------------------------------------*/
 /** Pin PCK0 (PIO_PD13B_PCK0 Peripheral C) */
-const Pin pinPCK = PIN_PCK0;
+//const Pin pinPCK2 = PIN_PCK2; // usable
+//const Pin pinPwm[] = {PIN_PWMC_PWMH0, PIN_PWMC_PWMH1};
+#ifdef  BOARD_SAMV71_DVB
+              const Pin pinPCK  = PIN_PCK1;
+#else
+              const Pin pinPCK  = PIN_PCK0;
+#endif
 
 
 /** Clock backup values */
@@ -24,45 +30,66 @@ static uint32_t masterClkPrescaler;
  *        module functions
  *----------------------------------------------------------------------------*/
 
-
-
 static void Timer_Counter(void)
 {
 static uint32_t Div; 
 static uint32_t TcClks; 
 
-	PMC_EnablePeripheral(ID_TC1);
+
 
 printf("\n\r=======================Timer counter ========================\n\r" );
 
-printf(I"Timer  ok: %d \n\r", TC_FindMckDivisor(4000000, BOARD_MCK, &Div, &TcClks, BOARD_MCK));
-printf(I"Timer div: %d \n\r", Div );
-printf(I"Timer clk: %d \n\r", TcClks );
+printf(I"Timer  ok: %d"R, TC_FindMckDivisor(4000000, BOARD_MCK, &Div, &TcClks, BOARD_MCK));
+printf(I"Timer div: %d"R, Div );
+printf(I"Timer clk: %d"R, TcClks );
 
+#ifdef	_SAMV71_TC1_INSTANCE_
+        PMC_EnablePeripheral(ID_TC1);
 	TC_Configure(TC1, 0, TcClks);
         TC_Start(TC1, 0);
-         
+#else
+        PMC_EnablePeripheral(ID_TC0);
+	TC_Configure(TC0, 0, TcClks);
+        TC_Start(TC0, 0);       
+        
+#endif        
 
 }
 
 void Clock_Config(void)
 {
-	/* Configure PCK as peripheral */
-	PIO_Configure(&pinPCK, 1);
 	TimeTick_Configure();
 
-        
        /* Enable clock of the DMA peripheral */
-	if (!PMC_IsPeriphEnabled(ID_XDMAC))
-        PMC_EnablePeripheral(ID_XDMAC);
+	if (!PMC_IsPeriphEnabled(ID_XDMAC)) PMC_EnablePeripheral(ID_XDMAC);
         
 	/* Configure PCK0 as peripheral */
         CalcPmcParam();
-        PMC_EnablePeripheral(ID_PIOC);
-        Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75)); //75 for 4MHz
         
-	printf(I"Current PMC clock from start-up configuration \n\r");
+#ifdef  _SAMV71_PIOC_INSTANCE_
+              PMC_EnablePeripheral(ID_PIOC);
+#else
+              PMC_EnablePeripheral(ID_PIOB);
+#endif
+              
+
+#ifdef  BOARD_SAMV71_DVB
+         //Configure_Pck1(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));    //  2+1 for 4 MHz, 11 for 1MHz
+         Configure_Pck1(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(11));    //  2+1 for 4 MHz, 11 for 1MHz
+#else
+        // PB12 pck0 on erase pin        
+        // MATRIX->CCFG_SYSIO |=  0x1u << 12;
+        //Configure_Pck0(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75));   // 75 for 4 MHz
+        //Configure_Pck2(PMC_PCK_CSS_PLLA_CLK, PMC_PCK_PRES(75));   // 75 for 4 MHz
+         Configure_Pck0(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));    //  2+1 for 4 MHz, 11 for 1MHz
+        //Configure_Pck2(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));      //  2+1 for 4 MHz, 11 for 1MHz
+#endif 
+ 
+	printf(I"Current PMC clock from start-up configuration"R);
         Timer_Counter();
+        	/* Configure PCK as peripheral */
+	PIO_Configure(&pinPCK, 1);
+        //PIO_Configure(&pinPCK2, 1);
 	DumpPmcConfiguration();
         
 
@@ -78,9 +105,9 @@ void DumpPmcConfiguration(void)
 	ucChar[1] = ((PMC->CKGR_MOR & CKGR_MOR_MOSCSEL) == CKGR_MOR_MOSCSEL) ?
 			'X' : ' ';
 	printf("\n\r    On-Chip 12MHz RC oscillator [%c] \n\r", ucChar[0]);
-        printf("    12MHz crystal oscillator    [%c] \n\r", ucChar[1]);
+        printf("        12MHz crystal oscillator    [%c] \n\r", ucChar[1]);
 	printf("\n\r    PLLA Multiplier =   %u  \n\r",  (unsigned int)pllMultiplier);
-        printf("    PLLA clock      =   %u MHz\n\r",(unsigned int)(pllaClk/1000000));
+        printf("        PLLA clock      =   %u MHz\n\r",(unsigned int)(pllaClk/1000000));
         
 	printf("\n\r Master clock\n\r");
 	ucChar[0] = ((PMC->PMC_MCKR & PMC_MCKR_CSS_Msk) == PMC_MCKR_CSS_SLOW_CLK) ?
@@ -110,7 +137,7 @@ void DumpPmcConfiguration(void)
 	printf("\n\r    SLOW_CLK [%c]\n\r    MAIN_CLK [%c]\n\r    PLLA_CLK [%c]\n\r    UPLL_CLK [%c]\n\r     MCK_CLK [%c]\n\r",
 			ucChar[0], ucChar[1], ucChar[2], ucChar[3], ucChar[4]);
         printf(I"\n\r");
-        printf(I"External main clock on PCK0 ...\n\r");
+        printf(I"External main clock on PCK0 ..."R);
 	printf("==============================================================\n\r");
 }
 
@@ -130,6 +157,28 @@ void Configure_Pck0(uint32_t css, uint32_t pres)
 	REG_PMC_SCER = PMC_SCER_PCK0;
 	/* Wait for the PCKRDY1 bit to be set in the PMC_SR register*/
 	while ((REG_PMC_SR & PMC_SR_PCKRDY0) == 0 );	
+}
+void Configure_Pck1(uint32_t css, uint32_t pres)
+{//PA17 for DVB
+	/* Disable programmable clock 1 output */
+	REG_PMC_SCDR = PMC_SCER_PCK1;
+	/* Enable the DAC master clock */
+	PMC->PMC_PCK[1] = css | pres;
+	/* Enable programmable clock 1 output */
+	REG_PMC_SCER = PMC_SCER_PCK1;
+	/* Wait for the PCKRDY1 bit to be set in the PMC_SR register*/
+	while ((REG_PMC_SR & PMC_SR_PCKRDY1) == 0 );	
+}
+void Configure_Pck2(uint32_t css, uint32_t pres)
+{
+	/* Disable programmable clock 1 output */
+	REG_PMC_SCDR = PMC_SCER_PCK2;
+	/* Enable the DAC master clock */
+	PMC->PMC_PCK[2] = css | pres;
+	/* Enable programmable clock 1 output */
+	REG_PMC_SCER = PMC_SCER_PCK2;
+	/* Wait for the PCKRDY1 bit to be set in the PMC_SR register*/
+	while ((REG_PMC_SR & PMC_SR_PCKRDY2) == 0 );	
 }
 
 void Configure_Pck0_onthefly(uint32_t css, uint32_t pres)
