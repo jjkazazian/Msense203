@@ -44,7 +44,6 @@ void PIO_synchro_polling_onfall(void);
 void PIO_synchro_ignore(void);
 void PIO_DMA_firstbuffer(void);
 void Capture_console(void);
-void Capture_01(void);
 void Capture_02(void);
 void Capture_301(void);
 void Capture_console_Print(void);

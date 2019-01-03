@@ -72,9 +72,6 @@ uint32_t k;
         Sense_Dump_param(); // SPI com and read registers
         mb->synchro = false;
         
-    #if defined(BOARD_SAMV71_XULT)
-	printf(I"board_v71_xult"R);
-    #endif
         
         /*
         while(1) {
@@ -88,10 +85,11 @@ uint32_t k;
         */
 Console: 
         IO_ctrl(0,0);  
+        mb->data = 0;
         waitKey(); // space bar  to continue or '²' for console
         Capture_console(); 
         //Capture_301();
-        //Capture_01(); 
+        
         Capture_02();  
 goto Console;
 

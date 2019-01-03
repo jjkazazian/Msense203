@@ -19,7 +19,7 @@
 #define MIN(a,b) (((a)<(b))?(a):(b)) // minus   = MIN(mean, minus);
 #define MAX(a,b) (((a)>(b))?(a):(b)) // maximus = MAX(mean, maximus); 
 
-#define BUFFER_NUMBER     4                  // numbers of buffers to acquire
+#define BUFFER_NUMBER     2                  // numbers of buffers to acquire
 #define CICOSR           64                  // Comb filter decimation factor
 #define CIC_NUMBER       229                 // sample number after CIC filter
 #define SAMPLES_NUMBER   CIC_NUMBER*CICOSR   // numbers of signal Word samples of bitstream 
@@ -94,8 +94,14 @@ typedef struct   {
     bool synchro;       // PIO synchro detected
     bool presync;       // PIO synchro previous instant value
     bool sync;          // PIO synchro instant value
+    bool clk;           // PIO clock instant value
+    bool preclk;        // PIO clock instant value
+    uint32_t syncpos;   // PIO synchro position value, 3,2,1,0
+    uint32_t value;     // PIO synchro code value
+    uint32_t synccount; // PIO synchro counting value
     uint32_t *Pab;      // pointer to buffer A or B
-    
+    uint32_t data;      // DMA previous value
+       
     // State machine
     bool cic_ready[5];   // start DSP computation
     bool dsp_compute;    // start DSP computation

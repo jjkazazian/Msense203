@@ -19,10 +19,18 @@ struct _DEMUX demx;
  *----------------------------------------------------------------------------*/
 
   static void mxcode(void) {
-    // D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity      
-    // D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)
-    // D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)      
-    // D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)
+    // D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity  D3[0] = SDI1(0), D3(1) = SDV1(1), D3(2) = SDI2(2), D3(3) = 0 parity    
+    // D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)   D2[0] = SD0(2),  D2(1) = SDV1(0), D2(2) = SDI2(1), D2(3) = SDV2(2)
+    // D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)   D1[0] = SD0(1),  D1(1) = SDI1(2), D1(2) = SDI2(0), D1(3) = SDV2(1)   
+    // D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)   D0[0] = SD0(0),  D0(1) = SDI1(1), D0(2) = SDV1(2), D0(3) = SDV2(0)
+//DVB
+    // D7(3) = 0 parity,   D7(2) = SDI2(2),  D7(1) = SDV1(1),  D7[0] = SDI1(0),  D7(3) = 0 parity,   D7(2) = SDI2(2),  D7(1) = SDV1(1),  D7[0] = SDI1(0),
+    // D6(3) = 1,          D6(2) = 0,        D6(1) = 0,        D6(0) = 0,        D6(3) = 1,          D6(2) = 0,        D6(1) = 0,        D6(0) = 0, 
+    // D2(3) = SDV2(2)     D2(2) = SDI2(1),  D2(1) = SDV1(0),  D2[0] = SD0(2),   D2(3) = SDV2(2)     D2(2) = SDI2(1),  D2(1) = SDV1(0),  D2[0] = SD0(2),    
+    // D1(3) = SDV2(1)     D1(2) = SDI2(0),  D1(1) = SDI1(2),  D1[0] = SD0(1),   D1(3) = SDV2(1)     D1(2) = SDI2(0),  D1(1) = SDI1(2),  D1[0] = SD0(1),   
+    // D0(3) = SDV2(0)     D0(2) = SDV1(2),  D0(1) = SDI1(1),  D0[0] = SD0(0),   D0(3) = SDV2(0)     D0(2) = SDV1(2),  D0(1) = SDI1(1),  D0[0] = SD0(0),       
+    
+    
 
     // bits attribution, Change on posedge
     // Sigma delta order MSB to LSB

@@ -55,20 +55,70 @@ void Print_Buffer_bin(int32_t * buf) {
 
 
 void Unpack_word_bs0(uint32_t *in) { 
-// for runtime measurement
-   mb->to_bs[0] = 0;
-   mb->to_bs[0] =  in[mb->count] << 5;
-   mb->to_bs[0] =  mb->to_bs[0]  >> 5;
+
+#ifdef  BOARD_SAMV71_DVB
+ if (((in[mb->count] & (0x1u << 6+24)) >> 6+24)==1) { 
+       mb->synccount = 4 ;
+
+       mb->to_bs[0] =  in[mb->count] << 5;
+       mb->to_bs[0] =  mb->to_bs[0]  >> 5;
+ }
+ if (((in[mb->count] & (0x1u << 6+16)) >> 6+16)==1) { 
+       mb->synccount =3 ;
+  
+       mb->to_bs[0] =  in[mb->count] >> 24-5;
+       mb->to_bs[0] =  mb->to_bs[0]  >> 5;      
+ }
+ if (((in[mb->count] & (0x1u << 6+8))  >> 6+8)==1) { 
+       mb->synccount =2 ;
+
+       mb->to_bs[0] =  in[mb->count] >> 16-5;
+       mb->to_bs[0] =  mb->to_bs[0]  >> 5;  
+ }
+  if (((in[mb->count] & (0x1u << 6))    >> 6) ==1) { 
+       mb->synccount =1 ;
+
+       mb->to_bs[0] =  in[mb->count] >> 8-5;
+       mb->to_bs[0] =  mb->to_bs[0]  >> 5; 
+ }  
+#else
+    
+       mb->to_bs[0] =  in[mb->count] << 5;
+       mb->to_bs[0] =  mb->to_bs[0]  >> 5;
+#endif 
 }
 
 void Unpack_word_bs1( uint32_t *in) { 
   
 #ifdef  BOARD_SAMV71_DVB
-  mb->to_bs[1] = 0;
-  mb->to_bs[1] =  (in[mb->count] & 0x1u << 7) >> 2| (in[mb->count] & 0x3u << 8) >> 2;
-  mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+ if (((in[mb->count] & (0x1u << 6+24)) >> 6+24)==1) {  
+          mb->synccount =4 ;
+        
+          mb->to_bs[1] =  (in[mb->count] & 0x1u << 7) >> 7-5 | (in[mb->count] & 0x3u << 8) >> 2;
+          mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+ } 
+  if (((in[mb->count] & (0x1u << 6+16)) >> 6+16)==1) { 
+          mb->synccount =3 ;
+     
+          mb->to_bs[1] =  ((mb->data & 0x1u << 31) >> (31-5)) | ((in[mb->count] & 0x3u << 0) << 6);
+          mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+  }  
+if (((in[mb->count] & (0x1u << 6+8))  >> 6+8)==1) { 
+          mb->synccount =2 ;
+         
+          mb->to_bs[1] =  ((in[mb->count] & 0x1u << 23) >> (23-5)) | (in[mb->count] & 0x3u << 24) >> 24-6;
+          mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+  }
+  if (((in[mb->count] & (0x1u << 6))    >> 6) ==1) { 
+          mb->synccount =1 ;
+        
+          mb->to_bs[1] =  (in[mb->count] & 0x1u << 15) >> 15-5| (in[mb->count] & 0x3u << 16) >> 16-6;
+          mb->to_bs[1] =  mb->to_bs[1]  >> 5;
+  } 
+ 
+  mb->data = in[mb->count];
 #else
-  mb->to_bs[1] = 0;
+ 
   mb->to_bs[1] =  (in[mb->count] & 0x1u << 3)  << 2 | (in[mb->count] & 0x3u << 8) >> 2;
   mb->to_bs[1] =  mb->to_bs[1]  >> 5;
 #endif   
@@ -77,11 +127,36 @@ void Unpack_word_bs1( uint32_t *in) {
 
 void Unpack_word_bs2( uint32_t *in) { 
 #ifdef  BOARD_SAMV71_DVB
-  mb->to_bs[2] = 0;
-  mb->to_bs[2] =  (in[mb->count] & 0x1u << 15)  >> 9 | (in[mb->count] & 0x1u << 10)  >> 10-5 | (in[mb->count] & 0x1u << 16) >> 14-5;
-  mb->to_bs[2] =  mb->to_bs[2]  >> 5;
+  if (((in[mb->count] & (0x1u << 6+24)) >> 6+24)==1) { 
+          mb->synccount = 4;
+         
+          mb->to_bs[2] =  (in[mb->count] & 0x3u << 15)  >> 9 | (in[mb->count] & 0x1u << 10)  >> 10-5;
+          mb->to_bs[2] =  mb->to_bs[2]  >> 5;
+ }
+  if (((in[mb->count] & (0x1u << 6+16)) >> 6+16)==1) { 
+          mb->synccount = 3;
+        
+          mb->to_bs[2] =  (in[mb->count] & 0x3u << 7)  >> 1 | (in[mb->count] & 0x1u << 2)  << 3 ;
+          mb->to_bs[2] =  mb->to_bs[2]  >> 5;      
+ }
+  if (((in[mb->count] & (0x1u << 6+8))  >> 6+8)==1) { 
+          mb->synccount = 2;
+         
+          mb->to_bs[2] = ( (in[mb->count] & 0x1u )  << 7);
+          mb->to_bs[2] |= ((mb->data & 0x1u << 31)  >> 31-6) |  ((mb->data & 0x1u << 26) >> 26-5);
+          mb->to_bs[2] =  mb->to_bs[2]  >> 5; 
+ }
+       
+   if (((in[mb->count] & (0x1u << 6))    >> 6) ==1) { 
+          mb->synccount =1 ; 
+
+          mb->to_bs[2] =  (in[mb->count] & 0x3u << 23)  >> 23-6  | (in[mb->count] & 0x1u << 18) >> 18-5;
+          mb->to_bs[2] =  mb->to_bs[2]  >> 5;     
+  }
+  mb->data = in[mb->count];
+       
 #else  
-  mb->to_bs[2] = 0;
+ 
   mb->to_bs[2] =  (in[mb->count] & 0x3u << 10)  >> 10-5 | (in[mb->count] & 0x1u << 16) >> 14-5;
   mb->to_bs[2] =  mb->to_bs[2]  >> 5;
 #endif  
@@ -89,20 +164,70 @@ void Unpack_word_bs2( uint32_t *in) {
 
 void Unpack_word_bs3( uint32_t *in) { 
 #ifdef  BOARD_SAMV71_DVB
-  mb->to_bs[3] = 0;
-  mb->to_bs[3] =  (in[mb->count] & 0x1u << 23)  >> 16 | (in[mb->count] & 0x3u << 17)  >> 12;
-  mb->to_bs[3] =  mb->to_bs[3]  >> 5;
+  if (((in[mb->count] & (0x1u << 6+24)) >> 6+24)==1) { 
+          mb->synccount = 4;  
+         
+          mb->to_bs[3] =  (in[mb->count] & 0x1u << 23)  >> 16 | (in[mb->count] & 0x3u << 17)  >> 12;
+          mb->to_bs[3] =  mb->to_bs[3]  >> 5;
+  }
+  if (((in[mb->count] & (0x1u << 6+16)) >> 6+16)==1) { 
+        mb->synccount =3;
+        
+        mb->to_bs[3] =  (in[mb->count] & 0x1u << 15)  >> 15-7 | (in[mb->count] & 0x3u << 9)  >> 9-5;
+        mb->to_bs[3] =  mb->to_bs[3]  >> 5;   
+  }
+  if (((in[mb->count] & (0x1u << 6+8))  >> 6+8)==1) { 
+        mb->synccount = 2 ;
+    
+        mb->to_bs[3] =  (in[mb->count] & 0x1u << 7)  | ((in[mb->count] & 0x3u << 1)  << 4);
+        mb->to_bs[3] =  mb->to_bs[3]  >> 5; 
+  }
+  if (((in[mb->count] & (0x1u << 6))    >> 6) ==1) { 
+        mb->synccount =1 ; 
+       
+        mb->to_bs[3] =  (in[mb->count] & 0x1u << 31)  >> 31-7 | (in[mb->count] & 0x3u << 25)  >> 25-5;
+        mb->to_bs[3] =  mb->to_bs[3]  >> 5; 
+  }  
+                
+                
 #else    
-  mb->to_bs[3] = 0;
+  
   mb->to_bs[3] =  (in[mb->count] & 0x7u << 17)  >> 12;
   mb->to_bs[3] =  mb->to_bs[3]  >> 5;
 #endif    
 }
 
 void Unpack_word_bs4( uint32_t *in) { 
-  mb->to_bs[4] = 0;
+#ifdef  BOARD_SAMV71_DVB
+  if (((in[mb->count] & (0x1u << 6+24)) >> 6+24)==1) { 
+        mb->synccount = 4;  
+       
+        mb->to_bs[4] =  in[mb->count] >> (24-5);
+        mb->to_bs[4] =  mb->to_bs[4]  >> 5;
+  }
+  if (((in[mb->count] & (0x1u << 6+16)) >> 6+16)==1) { 
+        mb->synccount =3;
+
+        mb->to_bs[4] =  in[mb->count] >> (16-5);
+        mb->to_bs[4] =  mb->to_bs[4]  >> 5;
+  }  
+if (((in[mb->count] & (0x1u << 6+8))  >> 6+8)==1) { 
+        mb->synccount = 2 ;
+       
+        mb->to_bs[4] =  in[mb->count] >> (8-5);
+        mb->to_bs[4] =  mb->to_bs[4]  >> 5;
+  }
+  if (((in[mb->count] & (0x1u << 6))    >> 6) ==1) { 
+        mb->synccount =1 ;
+     
+        mb->to_bs[4] =  in[mb->count] << (5);
+        mb->to_bs[4] =  mb->to_bs[4]  >> 5;
+  }  
+#else    
+  
   mb->to_bs[4] =  in[mb->count] >> (24-5);
   mb->to_bs[4] =  mb->to_bs[4]  >> 5;
+#endif   
 }
 
 
@@ -162,17 +287,34 @@ static void Reset_buffout(void)
   }
 }
 
-void PIO_synchro_polling_DVB(void) {
+void PIO_synchro_polling_DVB(void) { 
   mb->synchro = false;
   mb->presync = true;
-      while(!mb->synchro) {   
-      mb->synchro = IO_get_sync() & !IO_get_clk() ;
-      }
-      Enable_Capture();
-}
+  uint32_t n;
+  
+  Enable_Capture();
+  IO_ctrl(0,1);  
+                 
+  n=0;
+  
+      while(!mb->synchro) { 
+            mb->sync = IO_get_sync();
+            if (mb->presync==false && mb->sync==true) n++;
+            mb->presync = mb->sync;
+            if (n==18) mb->synchro = true;
+            }     
+    mb->value =  mb->A[n-2];
+    mb->syncpos  = 0;
+    mb->syncpos  =((mb->value & 0x1u << 6)    >> 6)   *1 ;
+    mb->syncpos +=((mb->value & 0x1u << 6+8)  >> 6+8) *2 ;
+    mb->syncpos +=((mb->value & 0x1u << 6+16) >> 6+16)*3 ;
+    mb->syncpos +=((mb->value & 0x1u << 6+24) >> 6+24)*4 ;
+ IO_ctrl(0,0); 
+      }   
 
 
-void PIO_synchro_polling_onrise(void) {
+
+void PIO_synchro_polling_onrise(void) { // not working with DVB ??
   mb->synchro = false;
   mb->presync = true;
       while(!mb->synchro) { 
@@ -187,7 +329,7 @@ void PIO_synchro_polling_onrise(void) {
       }         
 }
 
-void PIO_synchro_polling_onfall(void) {
+void PIO_synchro_polling_onfall(void) { // not working with DVB ??
   mb->synchro = false;
   mb->presync = false;
       while(!mb->synchro) { 
@@ -393,72 +535,6 @@ void Capture_301(void)
   
   
 }
-/** run capture sense 203  in condition 01*/
-void Capture_01(void)
-{
-  uint32_t buff_count = 0;
-  bool     buff_repeat = true;
-  uint32_t k;  
-  uint32_t j; 
-  
-  mb->buffer_switch = false;
-  if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B;  
-          
-  printf(I"START polling Fsync"R);    
-  Reset();
-  Reset_buffout();
-    
-#ifdef AUTOTEST
-      Enable_Capture(); 
-      PIO_Generation(); // Fill the first buffer 
-#else
-      PIO_synchro_polling_onfall(); // enable capture at sync detection  
-      PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
-#endif
-
-  
-  buff_repeat = true;
-  while (buff_repeat) { // switching between buffer
- //IO_ctrl(6,1);  
-     
-        buff_count++;   
-        if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
-
-     // start buffer loop A or B ////////////////////////////////////////
-        while (mb->repeat) { 
-           k++;
-#ifdef AUTOTEST
-           DSP();
-           BS_2_IO();
-#endif          
-          if (mb->Ena_cic) View(mb->View_bs,k); else BS_to_bin();
-          if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
-        }
-      // stop buffer loop A or B ////////////////////////////////////////
-        
-        
-     // wait for end of DMA callback, next buffer available  
-        while(mb->dmacall){  }   
-        Reset();
-        mb -> buffer_switch = !mb-> buffer_switch;
-
-      // End of buffering
-         if ( buff_count == BUFFER_NUMBER) {
-                     Disable_Capture();   
-                     buff_repeat = false;
-                     buff_count = 0; 
-              #ifdef BUFFOUT 
-                     if (mb->Ena_cic) Print_Buffer(mb->CIC_C); else Print_Buffer_bin(mb->CIC_C);
-                     if (mb->Ena_cic) Average(mb->CIC_C); else Average_bs(mb->CIC_C);
-                     if (mb->Ena_cic) Stdev(mb->CIC_C); // else Stdev_bs(mb->CIC_C);
-                     if (mb->Ena_cic) SNR();
-                     printf(I"STOP"R);
-              #endif
-         }
-         
-  }
- 
-}
 
 /** run capture sense 203  in condition 02*/
 void Capture_02(void)
@@ -476,10 +552,11 @@ void Capture_02(void)
   Reset_buffout(); // reset dma buffer
   reset_cic();     // reset filters
   
-       PIO_synchro_polling_DVB();
-      //PIO_synchro_polling_onfall();   // enable capture at sync detection for 1 MHz clock 
-      //PIO_synchro_polling_onrise(); // enable capture at sync detection for 4 MHz clock 
-      //PIO_synchro_ignore();
+      PIO_synchro_polling_DVB();
+    //PIO_synchro_polling_onfall();   // enable capture at sync detection for 1 MHz clock 
+    //PIO_synchro_polling_onrise();   // enable capture at sync detection for 4 MHz clock 
+    //PIO_synchro_ignore();
+       
       PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
 
   while (buff_repeat) { // switching between buffer A,B,A,B
@@ -488,18 +565,20 @@ void Capture_02(void)
                   if (mb->DMA_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
 
  // start buffer loop A or B           ////////////////////////////////////////
+                  IO_ctrl(0,1);  
                   while (mb->repeat) { 
                     k++;
                     if (mb->Ena_cic) View(mb->View_bs,k); else BS_to_bin();
                     if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
                   }
+                  IO_ctrl(0,0);  
 // stop buffer loop A or B            ////////////////////////////////////////
                   
                   
                // wait for end of DMA callback, next buffer available  
                   while(mb->dmacall){  }   
                   Reset();
-
+            
 
                 // End of buffering
                    if ( buff_count == BUFFER_NUMBER) {
@@ -511,6 +590,8 @@ void Capture_02(void)
                                if (mb->Ena_cic) Average(mb->CIC_C);      else Average_bs(mb->CIC_C);
                                if (mb->Ena_cic) Stdev(mb->CIC_C);     // else Stdev_bs(mb->CIC_C);
                                if (mb->Ena_cic) SNR();
+                               printf(I"synchro position= %d, code value = %x  data bs nb= %d"R,mb->syncpos, mb->value, mb->synccount );
+                               mb->synccount = 0;
                                printf(I"STOP"R);
                         #endif
                    }
@@ -562,28 +643,39 @@ static void cic_compute(uint32_t n, uint32_t k) {
        }
 }
 
+static void Print_Error(void) {
+Disable_Capture();  
+printf(I"Bitstream Error"R);   
+Enable_Capture();  
+}
+
 
 void View(uint32_t n, uint32_t k) {
 
  switch (n) {
                                 case 0:
-                                     Unpack_word_bs0(mb->Pab); 
+                                     Unpack_word_bs0(mb->Pab);
+                                     //if (mb->to_bs[0] > 2 || mb->to_bs[0] < -2) Print_Error();
                                      cic_compute(n,k);
                                     break;
                                 case 1:
                                      Unpack_word_bs1(mb->Pab); 
+                                     //if (mb->to_bs[1] > 2 || mb->to_bs[1] < -2) Print_Error();
                                      cic_compute(n,k);
                                       break;
                                 case 2:
-                                     Unpack_word_bs2(mb->Pab); 
+                                     Unpack_word_bs2(mb->Pab);
+                                     //if (mb->to_bs[2] > 2 || mb->to_bs[2] < -2) Print_Error();
                                      cic_compute(n,k);
                                     break;
                                 case 3:
                                      Unpack_word_bs3(mb->Pab); 
+                                     //if (mb->to_bs[3] > 2 || mb->to_bs[3] < -2) Print_Error();
                                      cic_compute(n,k);
                                     break;
                                 case 4:
                                      Unpack_word_bs4(mb->Pab); 
+                                     //if (mb->to_bs[4] > 2 || mb->to_bs[4] < -2) Print_Error();
                                      cic_compute(n,k);
                                     break;
                           } 
@@ -973,10 +1065,76 @@ void PIO_Capture_DMA(bool switch_buffer) {
 */
 
 
+/*
+
+void Capture_01(void)
+{
+  uint32_t buff_count = 0;
+  bool     buff_repeat = true;
+  uint32_t k;  
+  uint32_t j; 
+  
+  mb->buffer_switch = false;
+  if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B;  
+          
+  printf(I"START polling Fsync"R);    
+  Reset();
+  Reset_buffout();
+    
+#ifdef AUTOTEST
+      Enable_Capture(); 
+      PIO_Generation(); // Fill the first buffer 
+#else
+      PIO_synchro_polling_onfall(); // enable capture at sync detection  
+      PIO_DMA_firstbuffer(); // dmacall, buffer switch and reset
+#endif
+
+  
+  buff_repeat = true;
+  while (buff_repeat) { // switching between buffer
+ //IO_ctrl(6,1);  
+     
+        buff_count++;   
+        if (mb->buffer_switch) mb->Pab = mb->A; else mb->Pab = mb->B; 
+
+     // start buffer loop A or B ////////////////////////////////////////
+        while (mb->repeat) { 
+           k++;
+#ifdef AUTOTEST
+           DSP();
+           BS_2_IO();
+#endif          
+          if (mb->Ena_cic) View(mb->View_bs,k); else BS_to_bin();
+          if (mb->count == SAMPLES_NUMBER-1) {mb->repeat = false; mb->count=0;}  else mb->count++;
+        }
+      // stop buffer loop A or B ////////////////////////////////////////
+        
+        
+     // wait for end of DMA callback, next buffer available  
+        while(mb->dmacall){  }   
+        Reset();
+        mb -> buffer_switch = !mb-> buffer_switch;
+
+      // End of buffering
+         if ( buff_count == BUFFER_NUMBER) {
+                     Disable_Capture();   
+                     buff_repeat = false;
+                     buff_count = 0; 
+              #ifdef BUFFOUT 
+                     if (mb->Ena_cic) Print_Buffer(mb->CIC_C); else Print_Buffer_bin(mb->CIC_C);
+                     if (mb->Ena_cic) Average(mb->CIC_C); else Average_bs(mb->CIC_C);
+                     if (mb->Ena_cic) Stdev(mb->CIC_C); // else Stdev_bs(mb->CIC_C);
+                     if (mb->Ena_cic) SNR();
+                     printf(I"STOP"R);
+              #endif
+         }
+         
+  }
+ 
+}
 
 
-
-
+*/
 
 /*    
  data is stored in PIO_PCRHR and the flag DRDY is set to one in PIO_PCISR.

@@ -146,8 +146,8 @@ void Average(int32_t * buf)
   mb->cic_avg = 0;
   nb = CIC_NUMBER*BUFFER_NUMBER;
 
-for (j = 0; j < nb; j++) {mb->cic_avg = mb->cic_avg + buf[j];}
-  mb->cic_avg = mb->cic_avg/nb;
+for (j = 2; j < nb; j++) {mb->cic_avg = mb->cic_avg + buf[j];}
+  mb->cic_avg = mb->cic_avg/(nb-2);
   printf(I"Average                 = %lf"R, mb->cic_avg);
 }
 
@@ -184,8 +184,8 @@ void Stdev(int32_t * buf)
   mb->cic_rms = 0;
   nb= CIC_NUMBER*BUFFER_NUMBER;
   
-for (j = 0; j < nb; j++) {mb->cic_rms = mb->cic_rms + (buf[j]-mb->cic_avg)*(buf[j]-mb->cic_avg);}
-  rms =  mb->cic_rms/nb;
+for (j = 2; j < nb; j++) {mb->cic_rms = mb->cic_rms + (buf[j]-mb->cic_avg)*(buf[j]-mb->cic_avg);}
+  rms =  mb->cic_rms/(nb-2);
   mb->cic_rms = sqrt(rms);
 printf(I"Deviation Standard      = %lf"R, mb->cic_rms);
 }

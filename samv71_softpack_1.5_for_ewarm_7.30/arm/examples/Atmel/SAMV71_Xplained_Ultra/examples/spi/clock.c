@@ -75,7 +75,7 @@ void Clock_Config(void)
 
 #ifdef  BOARD_SAMV71_DVB
          //Configure_Pck1(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(2));    //  2+1 for 4 MHz, 11 for 1MHz
-         Configure_Pck1(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(11));    //  2+1 for 4 MHz, 11 for 1MHz
+        // Configure_Pck1(PMC_PCK_CSS_MAIN_CLK, PMC_PCK_PRES(11));    //  2+1 for 4 MHz, 11 for 1MHz
 #else
         // PB12 pck0 on erase pin        
         // MATRIX->CCFG_SYSIO |=  0x1u << 12;
